@@ -34,7 +34,7 @@ public class SmartHttpClientTest {
     public void testRibbonClient() throws Exception {
         int totalRequests = 20;
         String vipAddress = "www.foo.com";
-        String serverString = "www.yahoo.com:80,www.google.com:80,www.bing.com:80,www.icann.org:80,www.linkedin.com:80";
+        String serverString = "www.wikipedia.org:80,www.time.gov:80,www.bing.com:80,www.icann.org:80,api.atmosonline.com:80";
         List<Server> servers = SmartClientConfig.parseServerList(serverString);
 
         String clientName = "testRibbonClient";
