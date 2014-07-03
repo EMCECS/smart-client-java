@@ -24,12 +24,16 @@ import java.util.List;
  * Houses configuration for the smart client.
  */
 public class SmartClientConfig {
+    public static int DEFAULT_POLL_INTERVAL = 120; // seconds
+    public static int DEFAULT_TIMEOUT = 5000; // ms
+
     private String vipAddresses;
     private List<Server> initialNodes;
     private String user;
     private String secret;
-    private int pollInterval = 120; // seconds
-    private int timeout = -1; // ms
+    private String pollProtocol;
+    private int pollInterval = DEFAULT_POLL_INTERVAL;
+    private int timeout = DEFAULT_TIMEOUT;
 
     public String getVipAddresses() {
         return vipAddresses;
@@ -86,6 +90,17 @@ public class SmartClientConfig {
      */
     public void setSecret(String secret) {
         this.secret = secret;
+    }
+
+    public String getPollProtocol() {
+        return pollProtocol;
+    }
+
+    /**
+     * Sets the protocol to use when polling for active nodes (http or https).
+     */
+    public void setPollProtocol(String pollProtocol) {
+        this.pollProtocol = pollProtocol;
     }
 
     public int getPollInterval() {
@@ -155,6 +170,14 @@ public class SmartClientConfig {
      */
     public SmartClientConfig withSecret(String secret) {
         setSecret(secret);
+        return this;
+    }
+
+    /**
+     * @see #setPollProtocol(String)
+     */
+    public SmartClientConfig withPollProtocol(String pollProtocol) {
+        setPollProtocol(pollProtocol);
         return this;
     }
 

@@ -33,6 +33,12 @@
       <artifactId>ribbon-httpclient</artifactId>
       <version>0.3.9</version>
     </dependency>
+    <dependency>
+      <groupId>com.emc.vipr</groupId>
+      <artifactId>dataservices-common</artifactId>
+      <version>1.1.2-SNAPSHOT</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <name>ViPR Smart Client</name>

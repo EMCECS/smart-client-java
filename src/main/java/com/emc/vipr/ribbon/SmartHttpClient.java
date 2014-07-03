@@ -209,6 +209,7 @@ public class SmartHttpClient implements HttpClient {
             nfConfig.setProperty(CommonClientConfigKey.ServerListRefreshInterval, smartConfig.getPollInterval() * 1000);
 
             // set server list (polling) properties
+            nfConfig.setProperty(SmartClientConfigKey.ViPRDataServicesProtocol, smartConfig.getPollProtocol());
             nfConfig.setProperty(SmartClientConfigKey.ViPRDataServicesInitialNodes, smartConfig.getInitialNodesString());
             nfConfig.setProperty(SmartClientConfigKey.ViPRDataServicesUser, smartConfig.getUser());
             nfConfig.setProperty(SmartClientConfigKey.ViPRDataServicesUserSecret, smartConfig.getSecret());

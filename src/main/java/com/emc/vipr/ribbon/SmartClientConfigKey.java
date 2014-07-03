@@ -17,6 +17,7 @@ package com.emc.vipr.ribbon;
 import com.netflix.client.config.IClientConfigKey;
 
 public enum SmartClientConfigKey implements IClientConfigKey {
+    ViPRDataServicesProtocol("ViPRDataServicesProtocol"),
     ViPRDataServicesInitialNodes("ViPRDataServicesInitialNodes"),
     ViPRDataServicesUser("ViPRDataServicesUser"),
     ViPRDataServicesUserSecret("ViPRDataServicesUserSecret"),

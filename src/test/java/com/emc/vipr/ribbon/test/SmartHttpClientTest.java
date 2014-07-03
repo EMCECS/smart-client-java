@@ -34,12 +34,13 @@ public class SmartHttpClientTest {
     public void testRibbonClient() throws Exception {
         int totalRequests = 20;
         String vipAddress = "www.foo.com";
-        String serverString = "www.wikipedia.org:80,www.time.gov:80,www.bing.com:80,www.icann.org:80,api.atmosonline.com:80";
+        String serverString = "www.wikipedia.org:80,www.time.gov:80,www.bing.com:80,api.atmosonline.com:80";
         List<Server> servers = SmartClientConfig.parseServerList(serverString);
 
         String clientName = "testRibbonClient";
         SmartHttpClient client = new SmartHttpClient(clientName,
-                new SmartClientConfig().withInitialNodes(servers.toArray(new Server[servers.size()])).withVipAddresses(vipAddress)
+                new SmartClientConfig().withInitialNodes(servers.toArray(new Server[servers.size()]))
+                        .withVipAddresses(vipAddress).withPollProtocol("http")
         );
 
         // fire off a number of requests
