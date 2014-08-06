@@ -16,5 +16,6 @@ description = 'ViPR Smart Client - Extends the NetFlix Ribbon client with an upd
 
 dependencies {
     compile 'com.netflix.ribbon:ribbon-httpclient:0.3.9'
+    testCompile 'junit:junit:4.11'
     testCompile project(':dataservices-common')
 }
