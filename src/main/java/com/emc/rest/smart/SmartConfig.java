@@ -14,7 +14,9 @@
  */
 package com.emc.rest.smart;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Houses configuration for the smart client.
@@ -27,6 +29,8 @@ public class SmartConfig {
     private HostListProvider hostListProvider;
     private int pollInterval = DEFAULT_POLL_INTERVAL;
     private boolean disablePolling = false;
+
+    private Map<String, Object> clientProperties = new HashMap<>();
 
     public SmartConfig(List<String> initialHosts) {
         this.initialHosts = initialHosts;
@@ -78,5 +82,16 @@ public class SmartConfig {
 
     public void setDisablePolling(boolean disablePolling) {
         this.disablePolling = disablePolling;
+    }
+
+    public Map<String, Object> getClientProperties() {
+        return clientProperties;
+    }
+
+    /**
+     * Allows custom Jersey client properties to be set. These will be passed on in the Jersey ClientConfig
+     */
+    public void setClientProperties(Map<String, Object> clientProperties) {
+        this.clientProperties = clientProperties;
     }
 }
