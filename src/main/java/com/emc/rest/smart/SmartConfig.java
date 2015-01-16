@@ -30,7 +30,7 @@ public class SmartConfig {
     private int pollInterval = DEFAULT_POLL_INTERVAL;
     private boolean disablePolling = false;
 
-    private Map<String, Object> clientProperties = new HashMap<>();
+    private Map<String, Object> properties = new HashMap<>();
 
     public SmartConfig(List<String> initialHosts) {
         this.initialHosts = initialHosts;
@@ -84,14 +84,19 @@ public class SmartConfig {
         this.disablePolling = disablePolling;
     }
 
-    public Map<String, Object> getClientProperties() {
-        return clientProperties;
+    public Object property(String propName) {
+        return properties.get(propName);
+    }
+
+    public Object propAsString(String propName) {
+        Object value = property(propName);
+        return value == null ? null : value.toString();
     }
 
     /**
      * Allows custom Jersey client properties to be set. These will be passed on in the Jersey ClientConfig
      */
-    public void setClientProperties(Map<String, Object> clientProperties) {
-        this.clientProperties = clientProperties;
+    public void property(String propName, Object value) {
+        properties.put(propName, value);
     }
 }
