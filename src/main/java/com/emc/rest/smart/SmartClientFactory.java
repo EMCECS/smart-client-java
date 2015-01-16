@@ -1,8 +1,9 @@
 package com.emc.rest.smart;
 
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.glassfish.jersey.apache.connector.ApacheClientProperties;
 import org.glassfish.jersey.apache.connector.ApacheConnectorProvider;
 import org.glassfish.jersey.client.ClientConfig;
-import org.glassfish.jersey.client.JerseyClient;
 import org.glassfish.jersey.client.spi.ConnectorProvider;
 
 import javax.ws.rs.client.Client;
@@ -17,6 +18,13 @@ public final class SmartClientFactory {
     public static Client createSmartClient(SmartConfig smartConfig, ConnectorProvider baseConnectorProvider, Map<String, Object> clientProperties) {
         // init Jersey config
         ClientConfig clientConfig = new ClientConfig();
+
+        // set up multi-threaded connection pool
+        PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
+        // 200 maximum active connections (should be more than enough for any JVM instance)
+        connectionManager.setDefaultMaxPerRoute(200);
+        connectionManager.setMaxTotal(200);
+        clientConfig.property(ApacheClientProperties.CONNECTION_MANAGER, connectionManager);
 
         // pass in jersey parameters from calling code (allows customization of client)
         if (clientProperties != null) {
