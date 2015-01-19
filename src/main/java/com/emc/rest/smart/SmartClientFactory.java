@@ -8,14 +8,13 @@ import org.glassfish.jersey.client.spi.ConnectorProvider;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
-import java.util.Map;
 
 public final class SmartClientFactory {
     public static Client createSmartClient(SmartConfig smartConfig) {
-        return createSmartClient(smartConfig, new ApacheConnectorProvider(), null);
+        return createSmartClient(smartConfig, new ApacheConnectorProvider());
     }
 
-    public static Client createSmartClient(SmartConfig smartConfig, ConnectorProvider baseConnectorProvider, Map<String, Object> clientProperties) {
+    public static Client createSmartClient(SmartConfig smartConfig, ConnectorProvider baseConnectorProvider) {
         // init Jersey config
         ClientConfig clientConfig = new ClientConfig();
 
@@ -27,10 +26,8 @@ public final class SmartClientFactory {
         clientConfig.property(ApacheClientProperties.CONNECTION_MANAGER, connectionManager);
 
         // pass in jersey parameters from calling code (allows customization of client)
-        if (clientProperties != null) {
-            for (String propName : clientProperties.keySet()) {
-                clientConfig.property(propName, clientProperties.get(propName));
-            }
+        for (String propName : smartConfig.getProperties().keySet()) {
+            clientConfig.property(propName, smartConfig.property(propName));
         }
 
         // inject SmartConnector provider (this is the Jersey integration point of the load balancer)

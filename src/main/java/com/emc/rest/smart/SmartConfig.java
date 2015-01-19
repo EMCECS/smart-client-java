@@ -84,6 +84,10 @@ public class SmartConfig {
         this.disablePolling = disablePolling;
     }
 
+    public Map<String, Object> getProperties() {
+        return properties;
+    }
+
     public Object property(String propName) {
         return properties.get(propName);
     }
