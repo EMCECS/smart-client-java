@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class SmartClientTest {
     private static final Logger l4j = Logger.getLogger(SmartClientTest.class);
 
+    public static final String PROP_ATMOS_ENDPOINTS = "atmos.endpoints";
     public static final String PROP_ATMOS_UID = "atmos.uid";
     public static final String PROP_ATMOS_SECRET = "atmos.secret_key";
 
@@ -36,9 +37,9 @@ public class SmartClientTest {
         try {
             testProperties = TestConfig.getProperties();
         } catch (Exception e) {
-            Assume.assumeTrue(TestConfig.DEFAULT_PROJECT_NAME + " properties missing (look in src/test/resources for template", false);
+            Assume.assumeTrue(TestConfig.DEFAULT_PROJECT_NAME + " properties missing (look in src/test/resources for template)", false);
         }
-        String endpointStr = TestConfig.getPropertyNotEmpty(testProperties, "");
+        String endpointStr = TestConfig.getPropertyNotEmpty(testProperties, PROP_ATMOS_ENDPOINTS);
         final String uid = TestConfig.getPropertyNotEmpty(testProperties, PROP_ATMOS_UID);
         final String secret = TestConfig.getPropertyNotEmpty(testProperties, PROP_ATMOS_SECRET);
 

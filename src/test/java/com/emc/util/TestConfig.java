@@ -39,6 +39,7 @@ public class TestConfig {
         return props;
     }
 
+    @SuppressWarnings("unused")
     public static Properties getProperties() throws IOException {
         return getProperties(DEFAULT_PROJECT_NAME);
     }
@@ -46,6 +47,7 @@ public class TestConfig {
     /**
      * Convenience if you're using the default properties file
      */
+    @SuppressWarnings("unused")
     public static String getPropertyNotEmpty(String key) throws IOException {
         return getPropertyNotEmpty(getProperties(), key);
     }
