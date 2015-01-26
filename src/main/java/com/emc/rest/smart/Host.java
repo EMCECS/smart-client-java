@@ -107,18 +107,22 @@ public class Host implements HostStats {
         return responseQueueAverage + errorAdjustment + openConnectionAdjustment - msSinceLastUse;
     }
 
+    @Override
     public long getTotalConnections() {
         return totalConnections;
     }
 
+    @Override
     public long getTotalErrors() {
         return totalErrors;
     }
 
+    @Override
     public int getOpenConnections() {
         return openConnections;
     }
 
+    @Override
     public Date getLastConnectionTime() {
         return new Date(lastConnectionTime);
     }

@@ -1,23 +1,8 @@
-/*
- * Copyright 2014 EMC Corporation. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- * http://www.apache.org/licenses/LICENSE-2.0.txt
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
-description = 'ViPR Smart Client - Extends the NetFlix Ribbon client with an updated server list provided by the controller node(s).'
+description = 'Smart REST Client - JAX-RS (Jersey) REST client that provides client-side load balancing with a pluggable host list provider'
 
 dependencies {
-    compile 'org.glassfish.jersey.core:jersey-client:2.13',
-            'org.glassfish.jersey.connectors:jersey-apache-connector:2.13',
+    compile 'org.glassfish.jersey.core:jersey-client:2.15',
+            'org.glassfish.jersey.connectors:jersey-apache-connector:2.15',
             'log4j:log4j:1.2.17'
-    testCompile 'junit:junit:4.11'
-    testCompile project(':dataservices-common')
+    testCompile 'junit:junit:4.12'
 }

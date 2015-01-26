@@ -1,17 +1,3 @@
-/*
- * Copyright 2014 EMC Corporation. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * A copy of the License is located at
- *
- * http://www.apache.org/licenses/LICENSE-2.0.txt
- *
- * or in the "license" file accompanying this file. This file is distributed
- * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing
- * permissions and limitations under the License.
- */
 package com.emc.rest.smart;
 
 import java.util.HashMap;
@@ -41,20 +27,8 @@ public class SmartConfig {
         return initialHosts;
     }
 
-    /**
-     * Set the initial list of data services nodes in the ViPR cluster. These nodes will be queried at regular intervals
-     * to get the full current list of active nodes.
-     */
-    public void setInitialHosts(List<String> initialHosts) {
-        this.initialHosts = initialHosts;
-    }
-
     public synchronized LoadBalancer getLoadBalancer() {
         return loadBalancer;
-    }
-
-    public synchronized void setLoadBalancer(LoadBalancer loadBalancer) {
-        this.loadBalancer = loadBalancer;
     }
 
     public synchronized HostListProvider getHostListProvider() {
@@ -70,7 +44,7 @@ public class SmartConfig {
     }
 
     /**
-     * Set the interval in seconds to wait between queries for active nodes. Defaults to 120 seconds (2 minutes).
+     * Set the interval in seconds to wait between polling for active nodes. Defaults to 120 seconds (2 minutes).
      */
     public void setPollInterval(int pollInterval) {
         this.pollInterval = pollInterval;
@@ -90,11 +64,6 @@ public class SmartConfig {
 
     public Object property(String propName) {
         return properties.get(propName);
-    }
-
-    public Object propAsString(String propName) {
-        Object value = property(propName);
-        return value == null ? null : value.toString();
     }
 
     /**

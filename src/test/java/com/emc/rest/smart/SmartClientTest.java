@@ -1,6 +1,6 @@
 package com.emc.rest.smart;
 
-import com.emc.vipr.services.lib.ViprConfig;
+import com.emc.util.TestConfig;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
@@ -24,20 +24,23 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class SmartClientTest {
     private static final Logger l4j = Logger.getLogger(SmartClientTest.class);
 
+    public static final String PROP_ATMOS_UID = "atmos.uid";
+    public static final String PROP_ATMOS_SECRET = "atmos.secret_key";
+
     private static final String HEADER_FORMAT = "EEE, d MMM yyyy HH:mm:ss z";
-    private static final ThreadLocal<DateFormat> headerFormat = new ThreadLocal<DateFormat>();
+    private static final ThreadLocal<DateFormat> headerFormat = new ThreadLocal<>();
 
     @Test
     public void testAtmosOnViPR() throws Exception {
-        Properties viprProperties = null;
+        Properties testProperties = null;
         try {
-            viprProperties = ViprConfig.getProperties();
+            testProperties = TestConfig.getProperties();
         } catch (Exception e) {
-            Assume.assumeTrue("vipr.properties missing", false);
+            Assume.assumeTrue(TestConfig.DEFAULT_PROJECT_NAME + " properties missing (look in src/test/resources for template", false);
         }
-        String endpointStr = ViprConfig.getPropertyNotEmpty(viprProperties, ViprConfig.PROP_ATMOS_ENDPOINTS);
-        final String uid = ViprConfig.getPropertyNotEmpty(viprProperties, ViprConfig.PROP_ATMOS_UID);
-        final String secret = ViprConfig.getPropertyNotEmpty(viprProperties, ViprConfig.PROP_ATMOS_SECRET);
+        String endpointStr = TestConfig.getPropertyNotEmpty(testProperties, "");
+        final String uid = TestConfig.getPropertyNotEmpty(testProperties, PROP_ATMOS_UID);
+        final String secret = TestConfig.getPropertyNotEmpty(testProperties, PROP_ATMOS_SECRET);
 
         String[] endpoints = endpointStr.split(",");
         final URI serverUri = new URI(endpointStr.split(",")[0]);

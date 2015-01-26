@@ -1,7 +1,5 @@
 package com.emc.rest.smart;
 
-import org.apache.log4j.Logger;
-
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -9,8 +7,6 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class LoadBalancer {
-    private static final Logger l4j = Logger.getLogger(LoadBalancer.class);
-
     private final Queue<Host> hosts = new ConcurrentLinkedQueue<>();
 
     public LoadBalancer(List<String> initialHosts) {

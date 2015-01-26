@@ -19,8 +19,4 @@ public class SmartConnectorProvider implements ConnectorProvider {
     public Connector getConnector(Client client, Configuration runtimeConfig) {
         return new SmartConnector(delegated.getConnector(client, runtimeConfig), loadBalancer);
     }
-
-    public LoadBalancer getLoadBalancer() {
-        return loadBalancer;
-    }
 }
