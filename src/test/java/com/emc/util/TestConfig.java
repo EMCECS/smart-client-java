@@ -1,6 +1,11 @@
 package com.emc.util;
 
-import java.io.*;
+import org.junit.Assume;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Properties;
 
 /**
@@ -19,7 +24,7 @@ public class TestConfig {
      * @throws java.io.FileNotFoundException if the file was not found
      * @throws java.io.IOException           if there was an error reading the file.
      */
-    public static Properties getProperties(String projectName) throws IOException {
+    public static Properties getProperties(String projectName, boolean failIfMissing) throws IOException {
         String propFile = projectName + ".properties";
         InputStream in = TestConfig.class.getClassLoader().getResourceAsStream(propFile);
         if (in == null) {
@@ -27,9 +32,12 @@ public class TestConfig {
             File homeProps = new File(System.getProperty("user.home") + File.separator + propFile);
             if (homeProps.exists()) {
                 in = new FileInputStream(homeProps);
-            } else {
-                throw new FileNotFoundException(propFile);
             }
+        }
+
+        if (in == null) {
+            Assume.assumeFalse(projectName + ".properties missing (look in src/test/resources for template)", failIfMissing);
+            return null;
         }
 
         Properties props = new Properties();
@@ -41,7 +49,7 @@ public class TestConfig {
 
     @SuppressWarnings("unused")
     public static Properties getProperties() throws IOException {
-        return getProperties(DEFAULT_PROJECT_NAME);
+        return getProperties(DEFAULT_PROJECT_NAME, true);
     }
 
     /**
@@ -58,9 +66,7 @@ public class TestConfig {
      */
     public static String getPropertyNotEmpty(Properties p, String key) {
         String value = p.getProperty(key);
-        if (value == null || value.isEmpty()) {
-            throw new RuntimeException(String.format("The property %s is required", key));
-        }
+        Assume.assumeTrue(String.format("The property %s is required", key), value != null && !value.isEmpty());
         return value;
     }
 }
