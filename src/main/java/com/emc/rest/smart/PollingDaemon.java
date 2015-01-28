@@ -33,8 +33,6 @@ public class PollingDaemon extends Thread {
             } else {
                 try {
                     loadBalancer.updateHosts(hostListProvider.getHostList());
-
-                    // TODO: detect non-ViPR system and disable polling
                 } catch (Throwable t) {
                     l4j.warn("Unable to enumerate servers", t);
                 }
