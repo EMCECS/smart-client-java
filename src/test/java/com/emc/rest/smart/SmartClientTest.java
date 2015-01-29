@@ -32,7 +32,7 @@ public class SmartClientTest {
     private static final ThreadLocal<DateFormat> headerFormat = new ThreadLocal<>();
 
     @Test
-    public void testAtmosOnViPR() throws Exception {
+    public void testAtmosOnEcs() throws Exception {
         Properties testProperties = null;
         try {
             testProperties = TestConfig.getProperties();

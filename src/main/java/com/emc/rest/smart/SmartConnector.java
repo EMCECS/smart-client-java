@@ -12,7 +12,7 @@ import java.net.URISyntaxException;
 import java.util.concurrent.Future;
 
 public class SmartConnector implements Connector {
-    public static final String BYPASS_LOAD_BALANCER = "com.emc.vipr.smart.bypassLoadBalancer";
+    public static final String BYPASS_LOAD_BALANCER = "com.emc.rest.smart.bypassLoadBalancer";
 
     private Connector delegated;
     private LoadBalancer loadBalancer;
