@@ -1,6 +1,13 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 package com.emc.rest.smart;
 
 import com.emc.util.TestConfig;
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.WebResource;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
@@ -9,9 +16,6 @@ import org.junit.Test;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.Invocation;
-import javax.ws.rs.core.Response;
 import java.net.URI;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -85,18 +89,18 @@ public class SmartClientTest {
 
         String signature = sign("GET\n\n\n" + date + "\n" + path + "\nx-emc-date:" + date + "\nx-emc-uid:" + uid, secretKey);
 
-        Invocation.Builder request = client.target(serverUri).path(path).request();
+        WebResource.Builder request = client.resource(serverUri).path(path).getRequestBuilder();
 
         request.header("Date", date);
         request.header("x-emc-date", date);
         request.header("x-emc-uid", uid);
         request.header("x-emc-signature", signature);
 
-        Response response = request.get();
+        ClientResponse response = request.get(ClientResponse.class);
 
         if (response.getStatus() > 299) throw new RuntimeException("error response: " + response.getStatus());
 
-        String responseStr = response.readEntity(String.class);
+        String responseStr = response.getEntity(String.class);
         if (!responseStr.contains("Atmos")) throw new RuntimeException("unrecognized response string: " + responseStr);
     }
 

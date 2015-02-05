@@ -1,60 +1,61 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 package com.emc.rest.smart;
 
-import org.glassfish.jersey.client.ClientRequest;
-import org.glassfish.jersey.client.ClientResponse;
-import org.glassfish.jersey.client.spi.AsyncConnectorCallback;
-import org.glassfish.jersey.client.spi.Connector;
+import com.sun.jersey.api.client.ClientHandlerException;
+import com.sun.jersey.api.client.ClientRequest;
+import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.filter.ClientFilter;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.concurrent.Future;
 
-public class SmartConnector implements Connector {
+public class SmartFilter extends ClientFilter {
     public static final String BYPASS_LOAD_BALANCER = "com.emc.rest.smart.bypassLoadBalancer";
 
-    private Connector delegated;
     private LoadBalancer loadBalancer;
 
-    public SmartConnector(Connector delegated, LoadBalancer loadBalancer) {
-        this.delegated = delegated;
+    public SmartFilter(LoadBalancer loadBalancer) {
         this.loadBalancer = loadBalancer;
     }
 
     @Override
-    public ClientResponse apply(ClientRequest request) {
+    public ClientResponse handle(ClientRequest request) throws ClientHandlerException {
         // check for bypass flag
-        Boolean bypass = (Boolean) request.getProperty(BYPASS_LOAD_BALANCER);
+        Boolean bypass = (Boolean) request.getProperties().get(BYPASS_LOAD_BALANCER);
         if (bypass != null && bypass) {
-            return delegated.apply(request);
+            return getNext().handle(request);
         }
 
         // get highest ranked host for next request
         Host host = loadBalancer.getTopHost();
 
         // replace the host in the request
-        URI uri = request.getUri();
+        URI uri = request.getURI();
         try {
             uri = new URI(uri.getScheme(), uri.getUserInfo(), host.getName(), uri.getPort(),
                     uri.getPath(), uri.getQuery(), uri.getFragment());
         } catch (URISyntaxException e) {
             throw new RuntimeException("load-balanced host generated invalid URI", e);
         }
-        request.setUri(uri);
+        request.setURI(uri);
 
         // track requests stats for LB ranking
         Long startTime = System.currentTimeMillis();
         host.connectionOpened(); // not really, but we can't (cleanly) intercept any lower than this
         try {
             // call to delegate
-            ClientResponse response = delegated.apply(request);
+            ClientResponse response = getNext().handle(request);
 
             // capture request stats
             host.callComplete((int) (System.currentTimeMillis() - startTime), false);
 
             // wrap the input stream so we can capture the actual connection close
-            response.setEntityStream(new WrappedInputStream(response.getEntityStream(), host));
+            response.setEntityInputStream(new WrappedInputStream(response.getEntityInputStream(), host));
 
             return response;
         } catch (RuntimeException e) {
@@ -65,25 +66,6 @@ public class SmartConnector implements Connector {
 
             throw e;
         }
-    }
-
-    /**
-     * We assume here that the delegated implementation calls the standard apply method asynchronously. If it does
-     * not, load balancing logic will not apply to asynchronous calls.
-     */
-    @Override
-    public Future<?> apply(ClientRequest request, AsyncConnectorCallback callback) {
-        return delegated.apply(request, callback);
-    }
-
-    @Override
-    public String getName() {
-        return delegated.getName();
-    }
-
-    @Override
-    public void close() {
-        delegated.close();
     }
 
     /**

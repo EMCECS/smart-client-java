@@ -1,5 +1,10 @@
+/*
+ * Copyright (c) 2015 EMC Corporation
+ * All Rights Reserved
+ */
 package com.emc.rest.smart;
 
+import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,6 +14,10 @@ import java.util.Map;
  */
 public class SmartConfig {
     public static final int DEFAULT_POLL_INTERVAL = 120; // seconds
+
+    private URI proxyUri;
+    private String proxyUser;
+    private String proxyPass;
 
     private List<String> initialHosts;
     private LoadBalancer loadBalancer;
@@ -29,6 +38,30 @@ public class SmartConfig {
 
     public synchronized LoadBalancer getLoadBalancer() {
         return loadBalancer;
+    }
+
+    public URI getProxyUri() {
+        return proxyUri;
+    }
+
+    public void setProxyUri(URI proxyUri) {
+        this.proxyUri = proxyUri;
+    }
+
+    public String getProxyUser() {
+        return proxyUser;
+    }
+
+    public void setProxyUser(String proxyUser) {
+        this.proxyUser = proxyUser;
+    }
+
+    public String getProxyPass() {
+        return proxyPass;
+    }
+
+    public void setProxyPass(String proxyPass) {
+        this.proxyPass = proxyPass;
     }
 
     public synchronized HostListProvider getHostListProvider() {
