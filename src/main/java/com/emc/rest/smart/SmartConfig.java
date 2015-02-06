@@ -25,7 +25,7 @@ public class SmartConfig {
     private int pollInterval = DEFAULT_POLL_INTERVAL;
     private boolean disablePolling = false;
 
-    private Map<String, Object> properties = new HashMap<>();
+    private Map<String, Object> properties = new HashMap<String, Object>();
 
     public SmartConfig(List<String> initialHosts) {
         this.initialHosts = initialHosts;

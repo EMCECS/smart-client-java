@@ -35,7 +35,7 @@ public class LoadBalancerTest {
 
         // simulate callCount successful calls with identical response times
         ExecutorService executorService = Executors.newFixedThreadPool(10);
-        List<Future> futures = new ArrayList<>();
+        List<Future> futures = new ArrayList<Future>();
         for (int i = 0; i < callCount; i++) {
             futures.add(executorService.submit(new Runnable() {
                 @Override
@@ -82,7 +82,7 @@ public class LoadBalancerTest {
 
         // make one meeeeeellion calls ;)
         ExecutorService service = Executors.newFixedThreadPool(32);
-        List<Future<Long>> futures = new ArrayList<>();
+        List<Future<Long>> futures = new ArrayList<Future<Long>>();
 
         for (int i = 0; i < 1000000; i++) {
             futures.add(service.submit(new LBOverheadTask(loadBalancer)));

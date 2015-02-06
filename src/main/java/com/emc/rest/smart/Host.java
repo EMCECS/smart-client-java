@@ -38,7 +38,7 @@ public class Host implements HostStats {
     protected long consecutiveErrors;
     protected long responseQueueAverage;
 
-    protected Queue<Long> responseQueue = new LinkedList<>();
+    protected Queue<Long> responseQueue = new LinkedList<Long>();
 
     /**
      * Uses a default error cool down of 30 secs and a response window size of 20.

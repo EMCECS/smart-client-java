@@ -33,7 +33,7 @@ public class SmartClientTest {
     public static final String PROP_ATMOS_SECRET = "atmos.secret_key";
 
     private static final String HEADER_FORMAT = "EEE, d MMM yyyy HH:mm:ss z";
-    private static final ThreadLocal<DateFormat> headerFormat = new ThreadLocal<>();
+    private static final ThreadLocal<DateFormat> headerFormat = new ThreadLocal<DateFormat>();
 
     @Test
     public void testAtmosOnEcs() throws Exception {
@@ -50,7 +50,7 @@ public class SmartClientTest {
         String[] endpoints = endpointStr.split(",");
         final URI serverUri = new URI(endpointStr.split(",")[0]);
 
-        List<String> initialHosts = new ArrayList<>();
+        List<String> initialHosts = new ArrayList<String>();
         for (String endpoint : endpoints) {
             initialHosts.add(new URI(endpoint).getHost());
         }
@@ -61,7 +61,7 @@ public class SmartClientTest {
         ExecutorService service = Executors.newFixedThreadPool(10);
 
         final AtomicInteger successCount = new AtomicInteger();
-        List<Future<?>> futures = new ArrayList<>();
+        List<Future<?>> futures = new ArrayList<Future<?>>();
 
         for (int i = 0; i < 100; i++) {
             futures.add(service.submit(new Runnable() {

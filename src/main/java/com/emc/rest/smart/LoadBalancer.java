@@ -11,7 +11,7 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class LoadBalancer {
-    private final Queue<Host> hosts = new ConcurrentLinkedQueue<>();
+    private final Queue<Host> hosts = new ConcurrentLinkedQueue<Host>();
 
     public LoadBalancer(List<String> initialHosts) {
 
@@ -59,7 +59,7 @@ public class LoadBalancer {
 
     protected void updateHosts(List<String> updatedHosts) throws Exception {
         // don't modify the parameter
-        List<String> hostList = new ArrayList<>(updatedHosts);
+        List<String> hostList = new ArrayList<String>(updatedHosts);
 
         synchronized (hosts) {
             // remove hosts from stored list that are not present in updated list
