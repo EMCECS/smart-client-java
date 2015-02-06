@@ -11,6 +11,8 @@ import com.sun.jersey.api.client.config.DefaultClientConfig;
 import com.sun.jersey.client.apache4.ApacheHttpClient4;
 import com.sun.jersey.client.apache4.ApacheHttpClient4Handler;
 import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
+import com.sun.jersey.core.impl.provider.entity.ByteArrayProvider;
+import com.sun.jersey.core.impl.provider.entity.FileProvider;
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
 
 public final class SmartClientFactory {
@@ -54,8 +56,14 @@ public final class SmartClientFactory {
             clientConfig.getProperties().put(propName, smartConfig.property(propName));
         }
 
-        // custom writer for input streams to ensure content-length is set
-        clientConfig.getClasses().add(SizedInputStreamWriter.class);
+        // replace sized writers with override writers to allow dynamic content-length (i.e. for transformations)
+        clientConfig.getClasses().remove(ByteArrayProvider.class);
+        clientConfig.getClasses().remove(FileProvider.class);
+        clientConfig.getClasses().add(SizeOverrideWriter.ByteArray.class);
+        clientConfig.getClasses().add(SizeOverrideWriter.File.class);
+        clientConfig.getClasses().add(SizeOverrideWriter.SizedIS.class);
+        clientConfig.getClasses().add(ByteArrayProvider.class);
+        clientConfig.getClasses().add(FileProvider.class);
 
         // build Jersey client
         Client client = new Client(clientHandler, clientConfig);
