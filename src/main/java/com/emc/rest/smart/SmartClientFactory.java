@@ -11,32 +11,16 @@ import com.sun.jersey.api.client.config.DefaultClientConfig;
 import com.sun.jersey.client.apache4.ApacheHttpClient4;
 import com.sun.jersey.client.apache4.ApacheHttpClient4Handler;
 import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
-import com.sun.jersey.core.impl.provider.entity.ByteArrayProvider;
-import com.sun.jersey.core.impl.provider.entity.FileProvider;
-import com.sun.jersey.core.impl.provider.entity.StringProvider;
-import com.sun.jersey.core.impl.provider.entity.XMLRootElementProvider;
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
-
-import javax.ws.rs.ext.MessageBodyReader;
-import javax.ws.rs.ext.MessageBodyWriter;
-import java.util.List;
 
 public final class SmartClientFactory {
     public static Client createSmartClient(SmartConfig smartConfig) {
-        return createSmartClient(smartConfig, null, null);
+        return createSmartClient(smartConfig, createApacheClientHandler(smartConfig));
     }
 
     public static Client createSmartClient(SmartConfig smartConfig,
-                                           List<Class<MessageBodyReader<?>>> readers,
-                                           List<Class<MessageBodyWriter<?>>> writers) {
-        return createSmartClient(smartConfig, createApacheClientHandler(smartConfig), readers, writers);
-    }
-
-    public static Client createSmartClient(SmartConfig smartConfig,
-                                           ClientHandler clientHandler,
-                                           List<Class<MessageBodyReader<?>>> readers,
-                                           List<Class<MessageBodyWriter<?>>> writers) {
-        Client client = createStandardClient(smartConfig, clientHandler, readers, writers);
+                                           ClientHandler clientHandler) {
+        Client client = createStandardClient(smartConfig, clientHandler);
 
         // inject SmartFilter (this is the Jersey integration point of the load balancer)
         client.addFilter(new SmartFilter(smartConfig.getLoadBalancer()));
@@ -49,7 +33,7 @@ public final class SmartClientFactory {
      * or node polling.
      */
     public static Client createStandardClient(SmartConfig smartConfig) {
-        return createStandardClient(smartConfig, null, null);
+        return createStandardClient(smartConfig, createApacheClientHandler(smartConfig));
     }
 
     /**
@@ -57,29 +41,21 @@ public final class SmartClientFactory {
      * or node polling.
      */
     public static Client createStandardClient(SmartConfig smartConfig,
-                                              List<Class<MessageBodyReader<?>>> readers,
-                                              List<Class<MessageBodyWriter<?>>> writers) {
-        return createStandardClient(smartConfig, createApacheClientHandler(smartConfig), readers, writers);
-    }
-
-    /**
-     * This creates a standard apache-based Jersey client, configured with a SmartConfig, but without any load balancing
-     * or node polling.
-     */
-    public static Client createStandardClient(SmartConfig smartConfig,
-                                              ClientHandler clientHandler,
-                                              List<Class<MessageBodyReader<?>>> readers,
-                                              List<Class<MessageBodyWriter<?>>> writers) {
+                                              ClientHandler clientHandler) {
         // init Jersey config
         ClientConfig clientConfig = new DefaultClientConfig();
+
+        // enable entity buffering to set content-length (disable chunked encoding)
+        // NOTE: if a non-apache client handler is used, this has no effect and chunked encoding will always be enabled
+        clientConfig.getProperties().put(ApacheHttpClient4Config.PROPERTY_ENABLE_BUFFERING, Boolean.TRUE);
 
         // pass in jersey parameters from calling code (allows customization of client)
         for (String propName : smartConfig.getProperties().keySet()) {
             clientConfig.getProperties().put(propName, smartConfig.property(propName));
         }
 
-        // add entity handlers
-        addHandlers(clientConfig, readers, writers);
+        // custom writer for input streams to ensure content-length is set
+        clientConfig.getClasses().add(SizedInputStreamWriter.class);
 
         // build Jersey client
         Client client = new Client(clientHandler, clientConfig);
@@ -113,40 +89,6 @@ public final class SmartClientFactory {
             clientConfig.getProperties().put(ApacheHttpClient4Config.PROPERTY_PROXY_PASSWORD, smartConfig.getProxyPass());
 
         return ApacheHttpClient4.create(clientConfig).getClientHandler();
-    }
-
-    static void addHandlers(ClientConfig clientConfig,
-                            List<Class<MessageBodyReader<?>>> readers,
-                            List<Class<MessageBodyWriter<?>>> writers) {
-        // add our message body handlers
-        clientConfig.getClasses().clear();
-
-        // custom types and buffered writers to ensure content-length is set
-        clientConfig.getClasses().add(MeasuredStringWriter.class);
-        clientConfig.getClasses().add(MeasuredJaxbWriter.App.class);
-        clientConfig.getClasses().add(MeasuredJaxbWriter.Text.class);
-        clientConfig.getClasses().add(MeasuredJaxbWriter.General.class);
-        clientConfig.getClasses().add(SizedInputStreamWriter.class);
-
-        // Jersey providers for types we support
-        clientConfig.getClasses().add(ByteArrayProvider.class);
-        clientConfig.getClasses().add(FileProvider.class);
-        clientConfig.getClasses().add(StringProvider.class);
-        clientConfig.getClasses().add(XMLRootElementProvider.App.class);
-        clientConfig.getClasses().add(XMLRootElementProvider.Text.class);
-        clientConfig.getClasses().add(XMLRootElementProvider.General.class);
-
-        // user-defined types
-        if (readers != null) {
-            for (Class<MessageBodyReader<?>> reader : readers) {
-                clientConfig.getClasses().add(reader);
-            }
-        }
-        if (writers != null) {
-            for (Class<MessageBodyWriter<?>> writer : writers) {
-                clientConfig.getClasses().add(writer);
-            }
-        }
     }
 
     private SmartClientFactory() {
