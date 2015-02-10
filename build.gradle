@@ -4,6 +4,8 @@
  */
 description = 'Smart REST Client - JAX-RS (Jersey) REST client that provides client-side load balancing with a pluggable host list provider'
 
+version = '1.0'
+
 dependencies {
     compile 'com.sun.jersey:jersey-client:1.18.3',
             'com.sun.jersey:jersey-core:1.18.3',
