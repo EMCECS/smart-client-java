@@ -4,9 +4,9 @@
  */
 package com.emc.rest.smart;
 
-import com.emc.rest.util.SizedInputStream;
 import com.sun.jersey.core.impl.provider.entity.ByteArrayProvider;
 import com.sun.jersey.core.impl.provider.entity.FileProvider;
+import com.sun.jersey.core.impl.provider.entity.InputStreamProvider;
 
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
@@ -74,10 +74,10 @@ public class SizeOverrideWriter<T> implements MessageBodyWriter<T> {
     }
 
     @Produces({"application/octet-stream", "*/*"})
-    public static class SizedIS extends SizeOverrideWriter<SizedInputStream> {
-        private static final SizedInputStreamWriter delegate = new SizedInputStreamWriter();
+    public static class InputStream extends SizeOverrideWriter<java.io.InputStream> {
+        private static final InputStreamProvider delegate = new InputStreamProvider();
 
-        public SizedIS() {
+        public InputStream() {
             super(delegate);
         }
     }

@@ -13,6 +13,7 @@ import com.sun.jersey.client.apache4.ApacheHttpClient4Handler;
 import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import com.sun.jersey.core.impl.provider.entity.ByteArrayProvider;
 import com.sun.jersey.core.impl.provider.entity.FileProvider;
+import com.sun.jersey.core.impl.provider.entity.InputStreamProvider;
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
 
 public final class SmartClientFactory {
@@ -26,6 +27,11 @@ public final class SmartClientFactory {
 
         // inject SmartFilter (this is the Jersey integration point of the load balancer)
         client.addFilter(new SmartFilter(smartConfig.getLoadBalancer()));
+
+        // set up polling for updated host list (if polling is disabled in smartConfig or there's no host list provider,
+        // nothing will happen)
+        PollingDaemon pollingDaemon = new PollingDaemon(smartConfig);
+        pollingDaemon.start();
 
         return client;
     }
@@ -47,10 +53,6 @@ public final class SmartClientFactory {
         // init Jersey config
         ClientConfig clientConfig = new DefaultClientConfig();
 
-        // enable entity buffering to set content-length (disable chunked encoding)
-        // NOTE: if a non-apache client handler is used, this has no effect and chunked encoding will always be enabled
-        clientConfig.getProperties().put(ApacheHttpClient4Config.PROPERTY_ENABLE_BUFFERING, Boolean.TRUE);
-
         // pass in jersey parameters from calling code (allows customization of client)
         for (String propName : smartConfig.getProperties().keySet()) {
             clientConfig.getProperties().put(propName, smartConfig.property(propName));
@@ -59,21 +61,18 @@ public final class SmartClientFactory {
         // replace sized writers with override writers to allow dynamic content-length (i.e. for transformations)
         clientConfig.getClasses().remove(ByteArrayProvider.class);
         clientConfig.getClasses().remove(FileProvider.class);
+        clientConfig.getClasses().remove(InputStreamProvider.class);
         clientConfig.getClasses().add(SizeOverrideWriter.ByteArray.class);
         clientConfig.getClasses().add(SizeOverrideWriter.File.class);
-        clientConfig.getClasses().add(SizeOverrideWriter.SizedIS.class);
+        clientConfig.getClasses().add(SizeOverrideWriter.InputStream.class);
         clientConfig.getClasses().add(ByteArrayProvider.class);
         clientConfig.getClasses().add(FileProvider.class);
+        clientConfig.getClasses().add(InputStreamProvider.class);
 
         // build Jersey client
         Client client = new Client(clientHandler, clientConfig);
 
         // TODO: do we need a custom retry handler?
-
-        // set up polling for updated host list (if polling is disabled in smartConfig or there's no host list provider,
-        // nothing will happen)
-        PollingDaemon pollingDaemon = new PollingDaemon(smartConfig);
-        pollingDaemon.start();
 
         return client;
     }
