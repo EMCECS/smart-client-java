@@ -2,7 +2,6 @@
  * Copyright (c) 2015 EMC Corporation
  * All Rights Reserved
  */
-// ****NOTE: to generate a coverage report, run ./gradlew test followed by ./gradlew testCoberturaReport
 description = 'Smart REST Client - JAX-RS (Jersey) REST client that provides client-side load balancing with a pluggable host list provider'
 
 buildscript {
