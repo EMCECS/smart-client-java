@@ -3,6 +3,9 @@
  * All Rights Reserved
  */
 /* --- Please put the following in your project's gradle.properties ---
+# path to Java 6 rt.jar (if installed)
+#java6Classpath=/System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Classes/classes.jar
+
 # Located on the signing server. KeyId can be found using gpg --list-keys
 signingKeyId=A4385DAD
 signingSecretKeyRingFile=/home/signer/.gnupg/secring.gpg
@@ -59,13 +62,13 @@ apply plugin: 'maven'
 defaultTasks 'distZip'
 
 gradle.taskGraph.whenReady { taskGraph ->
-    if (taskGraph.allTasks.any { it.name == 'uploadArchives' }) {
-        def sonatypePass = new String(System.console().readPassword('\nSonatype password: '))
-        uploadArchives.repositories.mavenDeployer.repository.authentication.password = sonatypePass
+    if (taskGraph.hasTask(':uploadArchives')) {
+        def signingPass = new String(System.console().readPassword('\nSigning key passphrase: '))
         ext.'signing.keyId' = signingKeyId
         ext.'signing.secretKeyRingFile' = signingSecretKeyRingFile
-        def signingPass = new String(System.console().readPassword('\nSigning key passphrase: '))
         ext.'signing.password' = signingPass
+        def sonatypePass = new String(System.console().readPassword('\nSonatype password: '))
+        uploadArchives.repositories.mavenDeployer.repository.authentication.password = sonatypePass
     }
     if (taskGraph.hasTask(':publishGhPages')) {
         githubPages.credentials.password = new String(System.console().readPassword('\nGithub password: '))
