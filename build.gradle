@@ -29,7 +29,7 @@ description = 'Smart REST Client - JAX-RS (Jersey) REST client that provides cli
 ext.githubProjectName = 'smart-client-java'
 
 buildscript {
-    ext.commonBuildVersion = '1.1'
+    ext.commonBuildVersion = '1.2'
     ext.commonBuildDir = "https://raw.githubusercontent.com/emcvipr/ecs-common-build/v$commonBuildVersion"
     apply from: "$commonBuildDir/ecs-publish.buildscript.gradle", to: buildscript
 }
