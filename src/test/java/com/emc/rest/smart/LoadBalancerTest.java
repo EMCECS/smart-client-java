@@ -87,7 +87,7 @@ public class LoadBalancerTest {
         l4j.info(Arrays.toString(loadBalancer.getHostStats()));
 
         for (HostStats stats : loadBalancer.getHostStats()) {
-            Assert.assertTrue("unbalanced call count", Math.abs(callCount / hostList.length - stats.getTotalConnections()) <= 2);
+            Assert.assertTrue("unbalanced call count", Math.abs(callCount / hostList.length - stats.getTotalConnections()) <= 3);
             Assert.assertEquals("average response wrong", callDuration, stats.getResponseQueueAverage());
         }
     }
@@ -121,7 +121,7 @@ public class LoadBalancerTest {
         LogMF.warn(l4j, "per call overhead: {0}µs", perCallOverhead / 1000);
         Logger.getRootLogger().setLevel(logLevel);
 
-        Assert.assertTrue("call overhead too high", perCallOverhead < 100000); // must be less than .1ms
+        Assert.assertTrue("call overhead too high", perCallOverhead < 150000); // must be less than .15ms
     }
 
     class LBOverheadTask implements Callable<Long> {
