@@ -3,9 +3,6 @@
  * All Rights Reserved
  */
 /* --- Please put the following in your project's gradle.properties ---
-# path to Java 6 rt.jar (if installed)
-#java6Classpath=/System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Classes/classes.jar
-
 # Located on the signing server. KeyId can be found using gpg --list-keys
 signingKeyId=A4385DAD
 signingSecretKeyRingFile=/home/signer/.gnupg/secring.gpg
@@ -15,11 +12,13 @@ scmUrl = 'https://github.com/emcvipr/foo'
 scmConnection = 'scm:git@github.com:emcvipr/foo.git'
 githubUrl = 'https://github.com/emcvipr/foo.git'
 
-# These should be overridden in your ~/.gradle/gradle.properties
+# The below should be overridden in your ~/.gradle/gradle.properties
 # note: you will be prompted for passwords if necessary
 sonatypeUsername=
 githubUsername=
 gitUsername=
+# path to Java 6 rt.jar (if installed)
+java6Classpath=
 */// --- END ---
 
 /* --- Set the following in your project's build.gradle along with any necessary custom logic ---
