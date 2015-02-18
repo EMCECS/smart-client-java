@@ -4,9 +4,7 @@
  */
 description = 'Smart REST Client - JAX-RS (Jersey) REST client that provides client-side load balancing with a pluggable host list provider'
 
-ext.scmUrl = 'https://github.com/emcvipr/smart-client'
-ext.scmConnection = 'scm:git@github.com:emcvipr/smart-client.git'
-ext.githubUrl = 'https://github.com/emcvipr/smart-client.git'
+ext.githubProjectName = 'smart-client-java'
 
 buildscript {
     apply from: "ecs-publish.buildscript.gradle", to: buildscript

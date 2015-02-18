@@ -17,12 +17,10 @@ signingSecretKeyRingFile=
 
 /* --- Set the following in your project's build.gradle along with any necessary custom logic ---
 description 'Description of this project'
-version '1.0.0'// comment the version to enable automated semantic versioning based on tags
+version '1.0.0'// omit the version to enable automated semantic versioning based on tags
 
-// examples for project "foo"
-ext.scmUrl = 'https://github.com/emcvipr/foo'
-ext.scmConnection = 'scm:git@github.com:emcvipr/foo.git'
-ext.githubUrl = 'https://github.com/emcvipr/foo.git'
+// if your github project is different than your origin project
+ext.githubProjectName = 'my-project-java'
 
 buildscript {
     apply from: "ecs-publish.buildscript.gradle", to: buildscript
@@ -41,6 +39,10 @@ dependencies {
 
 group 'com.emc.ecs'
 
+if (!hasProperty('githubProjectName')) ext.githubProjectName = project.name
+ext.scmUrl = "https://github.com/emcvipr/${githubProjectName}"
+ext.scmConnection = "scm:git@github.com:emcvipr/${githubProjectName}.git"
+ext.githubUrl = "https://github.com/emcvipr/${githubProjectName}.git"
 ext.aggregatedDocsDir = "$buildDir/aggregatedDocs"
 
 buildscript {
@@ -78,10 +80,10 @@ gradle.taskGraph.whenReady { taskGraph ->
 }
 
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
-if (java6Classpath) compileJava.options.bootClasspath = java6Classpath
 
 compileJava {
     sourceCompatibility = 1.6
+    if (java6Classpath) options.bootClasspath = java6Classpath
 }
 
 repositories {
