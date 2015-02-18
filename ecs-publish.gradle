@@ -2,28 +2,27 @@
  * Copyright (c) 2015 EMC Corporation
  * All Rights Reserved
  */
-/* --- Please put the following in your project's gradle.properties ---
-# Located on the signing server. KeyId can be found using gpg --list-keys
-signingKeyId=A4385DAD
-signingSecretKeyRingFile=/home/signer/.gnupg/secring.gpg
+/* --- Please put the following in ~/.gradle/gradle.properties ---
+# path to Java 6 rt.jar (if installed)
+java6Classpath=
 
-//replace foo below with project name
-scmUrl = 'https://github.com/emcvipr/foo'
-scmConnection = 'scm:git@github.com:emcvipr/foo.git'
-githubUrl = 'https://github.com/emcvipr/foo.git'
-
-# The below should be overridden in your ~/.gradle/gradle.properties
-# note: you will be prompted for passwords if necessary
+# set these if you plan on publishing. note: you will be prompted for passwords if necessary
 sonatypeUsername=
 githubUsername=
 gitUsername=
-# path to Java 6 rt.jar (if installed)
-java6Classpath=
+# Located on the signing server. KeyId can be found using gpg --list-keys
+signingKeyId=
+signingSecretKeyRingFile=
 */// --- END ---
 
 /* --- Set the following in your project's build.gradle along with any necessary custom logic ---
 description 'Description of this project'
 version '1.0.0'// comment the version to enable automated semantic versioning based on tags
+
+// examples for project "foo"
+ext.scmUrl = 'https://github.com/emcvipr/foo'
+ext.scmConnection = 'scm:git@github.com:emcvipr/foo.git'
+ext.githubUrl = 'https://github.com/emcvipr/foo.git'
 
 buildscript {
     apply from: "ecs-publish.buildscript.gradle", to: buildscript
@@ -31,7 +30,7 @@ buildscript {
 
 apply from: 'ecs-publish.gradle'
 
-//replace below with your project's actual dependencies
+// replace below with your project's actual dependencies
 dependencies {
     compile 'com.emc.ecs:smart-client:1.0.0',
             'com.emc.vipr:vipr-object-transformations:2.0.3',
