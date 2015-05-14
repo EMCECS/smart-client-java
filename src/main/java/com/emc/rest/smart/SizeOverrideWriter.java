@@ -103,4 +103,13 @@ public class SizeOverrideWriter<T> implements MessageBodyWriter<T> {
             super(delegate);
         }
     }
+
+    @Produces({"application/octet-stream", "*/*"})
+    public static class SizedInputStream extends SizeOverrideWriter<com.emc.rest.util.SizedInputStream> {
+        private static final SizedInputStreamWriter delegate = new SizedInputStreamWriter();
+
+        public SizedInputStream() {
+            super(delegate);
+        }
+    }
 }

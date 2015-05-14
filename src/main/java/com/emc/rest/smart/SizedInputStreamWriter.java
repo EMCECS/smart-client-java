@@ -24,22 +24,35 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-description = 'Smart REST Client - JAX-RS (Jersey) REST client that provides client-side load balancing with a pluggable host list provider'
+package com.emc.rest.smart;
 
-ext.githubProjectName = 'smart-client-java'
+import com.emc.rest.util.SizedInputStream;
+import com.sun.jersey.core.util.ReaderWriter;
 
-buildscript {
-    ext.commonBuildVersion = '1.3.1'
-    ext.commonBuildDir = "https://raw.githubusercontent.com/emcvipr/ecs-common-build/v$commonBuildVersion"
-    apply from: "$commonBuildDir/ecs-publish.buildscript.gradle", to: buildscript
-}
+import javax.ws.rs.Produces;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.ext.MessageBodyWriter;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Type;
 
-apply from: "$commonBuildDir/ecs-publish.gradle"
+@Produces({"application/octet-stream", "*/*"})
+public class SizedInputStreamWriter implements MessageBodyWriter<SizedInputStream> {
+    @Override
+    public boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
+        return SizedInputStream.class.isAssignableFrom(type);
+    }
 
-dependencies {
-    compile 'com.sun.jersey:jersey-client:1.18.3',
-            'com.sun.jersey:jersey-core:1.18.3',
-            'com.sun.jersey.contribs:jersey-apache-client4:1.18.3',
-            'log4j:log4j:1.2.17'
-    testCompile 'junit:junit:4.12'
+    @Override
+    public long getSize(SizedInputStream sizedInputStream, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
+        return sizedInputStream.getSize();
+    }
+
+    @Override
+    public void writeTo(SizedInputStream sizedInputStream, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream) throws IOException, WebApplicationException {
+        ReaderWriter.writeTo(sizedInputStream, entityStream);
+    }
 }

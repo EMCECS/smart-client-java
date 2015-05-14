@@ -86,6 +86,7 @@ public final class SmartClientFactory {
         clientConfig.getClasses().remove(InputStreamProvider.class);
         clientConfig.getClasses().add(SizeOverrideWriter.ByteArray.class);
         clientConfig.getClasses().add(SizeOverrideWriter.File.class);
+        clientConfig.getClasses().add(SizeOverrideWriter.SizedInputStream.class);
         clientConfig.getClasses().add(SizeOverrideWriter.InputStream.class);
         clientConfig.getClasses().add(ByteArrayProvider.class);
         clientConfig.getClasses().add(FileProvider.class);
