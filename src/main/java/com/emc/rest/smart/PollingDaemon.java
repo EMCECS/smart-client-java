@@ -33,6 +33,8 @@ import org.apache.log4j.Logger;
  * Polling thread that will terminate automatically when the application exits
  */
 public class PollingDaemon extends Thread {
+    public static final String PROPERTY_KEY = "com.emc.rest.smart.pollingDaemon";
+
     private static final Logger l4j = Logger.getLogger(PollingDaemon.class);
 
     private SmartConfig smartConfig;
