@@ -55,6 +55,9 @@ public final class SmartClientFactory {
         PollingDaemon pollingDaemon = new PollingDaemon(smartConfig);
         pollingDaemon.start();
 
+        // attach the daemon thread to the client so users can stop it when finished with the client
+        client.getProperties().put(PollingDaemon.PROPERTY_KEY, pollingDaemon);
+
         return client;
     }
 
