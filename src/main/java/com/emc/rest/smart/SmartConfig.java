@@ -27,6 +27,7 @@
 package com.emc.rest.smart;
 
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,21 +42,34 @@ public class SmartConfig {
     private String proxyUser;
     private String proxyPass;
 
-    private List<String> initialHosts;
     private LoadBalancer loadBalancer;
     private HostListProvider hostListProvider;
     private int pollInterval = DEFAULT_POLL_INTERVAL;
-    private boolean disablePolling = false;
+    private boolean hostUpdateEnabled = true;
+    private boolean healthCheckEnabled = true;
 
     private Map<String, Object> properties = new HashMap<String, Object>();
 
-    public SmartConfig(List<String> initialHosts) {
-        this.initialHosts = initialHosts;
-        this.loadBalancer = new LoadBalancer(initialHosts);
+    /**
+     * @see #SmartConfig(LoadBalancer)
+     */
+    public SmartConfig(String... initialHostNames) {
+        List<Host> hostList = new ArrayList<Host>();
+        for (String hostName : initialHostNames) {
+            hostList.add(new Host(hostName));
+        }
+        this.loadBalancer = new LoadBalancer(hostList);
     }
 
-    public List<String> getInitialHosts() {
-        return initialHosts;
+    /**
+     * Constructs a new SmartConfig using a new {@link LoadBalancer} seeded with the specified hosts
+     */
+    public SmartConfig(List<Host> initialHosts) {
+        this(new LoadBalancer(initialHosts));
+    }
+
+    public SmartConfig(LoadBalancer loadBalancer) {
+        this.loadBalancer = loadBalancer;
     }
 
     public synchronized LoadBalancer getLoadBalancer() {
@@ -105,26 +119,69 @@ public class SmartConfig {
         this.pollInterval = pollInterval;
     }
 
-    public boolean isDisablePolling() {
-        return disablePolling;
+    public boolean isHostUpdateEnabled() {
+        return hostUpdateEnabled;
     }
 
-    public void setDisablePolling(boolean disablePolling) {
-        this.disablePolling = disablePolling;
+    public void setHostUpdateEnabled(boolean hostUpdateEnabled) {
+        this.hostUpdateEnabled = hostUpdateEnabled;
+    }
+
+    public boolean isHealthCheckEnabled() {
+        return healthCheckEnabled;
+    }
+
+    public void setHealthCheckEnabled(boolean healthCheckEnabled) {
+        this.healthCheckEnabled = healthCheckEnabled;
     }
 
     public Map<String, Object> getProperties() {
         return properties;
     }
 
-    public Object property(String propName) {
+    public Object getProperty(String propName) {
         return properties.get(propName);
     }
 
     /**
      * Allows custom Jersey client properties to be set. These will be passed on in the Jersey ClientConfig
      */
-    public void property(String propName, Object value) {
+    public void withProperty(String propName, Object value) {
         properties.put(propName, value);
+    }
+
+    public SmartConfig withProxyUri(URI proxyUri) {
+        setProxyUri(proxyUri);
+        return this;
+    }
+
+    public SmartConfig withProxyUser(String proxyUser) {
+        setProxyUser(proxyUser);
+        return this;
+    }
+
+    public SmartConfig withProxyPass(String proxyPass) {
+        setProxyPass(proxyPass);
+        return this;
+    }
+
+    public SmartConfig withHostListProvider(HostListProvider hostListProvider) {
+        setHostListProvider(hostListProvider);
+        return this;
+    }
+
+    public SmartConfig withPollInterval(int pollInterval) {
+        setPollInterval(pollInterval);
+        return this;
+    }
+
+    public SmartConfig withHostUpdateEnabled(boolean hostUpdateEnabled) {
+        setHostUpdateEnabled(hostUpdateEnabled);
+        return this;
+    }
+
+    public SmartConfig withHealthCheckEnabled(boolean healthCheckEnabled) {
+        setHealthCheckEnabled(healthCheckEnabled);
+        return this;
     }
 }

@@ -24,17 +24,61 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package com.emc.rest.smart;
+package com.emc.rest.smart.ecs;
 
+import com.emc.rest.smart.Host;
+
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
-public interface HostListProvider {
-    List<Host> getHostList();
+public class Vdc implements Iterable<Host> {
+    private String name;
+    private List<Host> hosts;
 
-    /**
-     * If this completes without throwing an exception, the host is considered healthy
-     * (<code>host.setHealthy(true)</code> is called). Otherwise, the host is considered unhealthy/down
-     * (<code>host.setHealthy(false)</code> is called).
-     */
-    void runHealthCheck(Host host);
+    public Vdc(String... hostNames) {
+        this.name = hostNames[0];
+        hosts = new ArrayList<Host>();
+        for (String hostName : hostNames) {
+            hosts.add(new Host(hostName));
+        }
+    }
+
+    public Vdc(List<Host> hosts) {
+        this(hosts.get(0).getName(), hosts);
+    }
+
+    public Vdc(String name, List<Host> hosts) {
+        this.name = name;
+        this.hosts = hosts;
+    }
+
+    @Override
+    public Iterator<Host> iterator() {
+        return hosts.iterator();
+    }
+
+    public boolean isHealthy() {
+        for (Host host : hosts) {
+            if (!host.isHealthy()) return false;
+        }
+        return true;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public List<Host> getHosts() {
+        return hosts;
+    }
+
+    public Vdc withName(String name) {
+        setName(name);
+        return this;
+    }
 }

@@ -24,17 +24,34 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package com.emc.rest.smart;
+package com.emc.rest.smart.ecs;
 
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElements;
+import javax.xml.bind.annotation.XmlRootElement;
+import java.util.ArrayList;
 import java.util.List;
 
-public interface HostListProvider {
-    List<Host> getHostList();
+@XmlRootElement(name = "ListDataNode")
+public class ListDataNode {
+    private List<String> dataNodes = new ArrayList<String>();
+    private String versionInfo;
 
-    /**
-     * If this completes without throwing an exception, the host is considered healthy
-     * (<code>host.setHealthy(true)</code> is called). Otherwise, the host is considered unhealthy/down
-     * (<code>host.setHealthy(false)</code> is called).
-     */
-    void runHealthCheck(Host host);
+    @XmlElements(@XmlElement(name = "DataNodes"))
+    public List<String> getDataNodes() {
+        return dataNodes;
+    }
+
+    public void setDataNodes(List<String> dataNodes) {
+        this.dataNodes = dataNodes;
+    }
+
+    @XmlElement(name = "VersionInfo")
+    public String getVersionInfo() {
+        return versionInfo;
+    }
+
+    public void setVersionInfo(String versionInfo) {
+        this.versionInfo = versionInfo;
+    }
 }

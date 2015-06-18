@@ -54,24 +54,43 @@ public class PollingDaemon extends Thread {
             LoadBalancer loadBalancer = smartConfig.getLoadBalancer();
             HostListProvider hostListProvider = smartConfig.getHostListProvider();
 
-            if (smartConfig.isDisablePolling()) {
-                l4j.info("host polling is disabled; not updating hosts");
+            if (!smartConfig.isHostUpdateEnabled()) {
+                l4j.info("host update is disabled; not updating hosts");
             } else if (hostListProvider == null) {
                 l4j.info("no host list provider; not updating hosts");
             } else {
                 try {
                     loadBalancer.updateHosts(hostListProvider.getHostList());
                 } catch (Throwable t) {
-                    l4j.warn("Unable to enumerate servers", t);
+                    l4j.warn("unable to enumerate servers", t);
+                }
+            }
+
+            if (!smartConfig.isHealthCheckEnabled()) {
+                l4j.info("health check is disabled; not checking hosts");
+            } else if (hostListProvider == null) {
+                l4j.info("no host list provider; not checking hosts");
+            } else {
+                for (Host host : loadBalancer.getAllHosts()) {
+                    try {
+                        hostListProvider.runHealthCheck(host);
+                        host.setHealthy(true);
+                        LogMF.debug(l4j, "health check successful for {0}; host is marked healthy", host.getName());
+                    } catch (Throwable t) {
+                        host.setHealthy(false);
+                        l4j.warn("health check failed for " + host.getName() + "; host is marked unhealthy", t);
+                    }
                 }
             }
 
             long callTime = System.currentTimeMillis() - start;
             try {
-                LogMF.debug(l4j, "polling daemon finished; sleeping for {0} seconds..", smartConfig.getPollInterval());
-                Thread.sleep(smartConfig.getPollInterval() * 1000 - callTime);
+                long sleepTime = smartConfig.getPollInterval() * 1000 - callTime;
+                if (sleepTime < 0) sleepTime = 0;
+                LogMF.debug(l4j, "polling daemon finished; will poll again in {0}ms..", sleepTime);
+                if (sleepTime > 0) Thread.sleep(sleepTime);
             } catch (InterruptedException e) {
-                l4j.warn("Interrupted while sleeping");
+                l4j.warn("interrupted while sleeping", e);
             }
         }
     }
