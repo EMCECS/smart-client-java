@@ -48,7 +48,7 @@ public final class SmartClientFactory {
         Client client = createStandardClient(smartConfig, clientHandler);
 
         // inject SmartFilter (this is the Jersey integration point of the load balancer)
-        client.addFilter(new SmartFilter(smartConfig.getLoadBalancer()));
+        client.addFilter(new SmartFilter(smartConfig));
 
         // set up polling for updated host list (if polling is disabled in smartConfig or there's no host list provider,
         // nothing will happen)
@@ -80,7 +80,7 @@ public final class SmartClientFactory {
 
         // pass in jersey parameters from calling code (allows customization of client)
         for (String propName : smartConfig.getProperties().keySet()) {
-            clientConfig.getProperties().put(propName, smartConfig.property(propName));
+            clientConfig.getProperties().put(propName, smartConfig.getProperty(propName));
         }
 
         // replace sized writers with override writers to allow dynamic content-length (i.e. for transformations)
@@ -97,8 +97,6 @@ public final class SmartClientFactory {
 
         // build Jersey client
         Client client = new Client(clientHandler, clientConfig);
-
-        // TODO: do we need a custom retry handler?
 
         return client;
     }

@@ -31,6 +31,7 @@ import com.sun.jersey.api.client.ClientRequest;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.filter.ClientFilter;
 
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -39,10 +40,10 @@ import java.net.URISyntaxException;
 public class SmartFilter extends ClientFilter {
     public static final String BYPASS_LOAD_BALANCER = "com.emc.rest.smart.bypassLoadBalancer";
 
-    private LoadBalancer loadBalancer;
+    private SmartConfig smartConfig;
 
-    public SmartFilter(LoadBalancer loadBalancer) {
-        this.loadBalancer = loadBalancer;
+    public SmartFilter(SmartConfig smartConfig) {
+        this.smartConfig = smartConfig;
     }
 
     @Override
@@ -54,7 +55,7 @@ public class SmartFilter extends ClientFilter {
         }
 
         // get highest ranked host for next request
-        Host host = loadBalancer.getTopHost();
+        Host host = smartConfig.getLoadBalancer().getTopHost(request.getProperties());
 
         // replace the host in the request
         URI uri = request.getURI();
@@ -93,39 +94,13 @@ public class SmartFilter extends ClientFilter {
     /**
      * captures closure in host statistics
      */
-    protected class WrappedInputStream extends InputStream {
-        private InputStream delegated;
+    protected class WrappedInputStream extends FilterInputStream {
         private Host host;
         private boolean closed = false;
 
-        public WrappedInputStream(InputStream delegated, Host host) {
-            this.delegated = delegated;
+        public WrappedInputStream(InputStream in, Host host) {
+            super(in);
             this.host = host;
-        }
-
-        @Override
-        public int read() throws IOException {
-            return delegated.read();
-        }
-
-        @Override
-        public int read(byte[] b) throws IOException {
-            return delegated.read(b);
-        }
-
-        @Override
-        public int read(byte[] b, int off, int len) throws IOException {
-            return delegated.read(b, off, len);
-        }
-
-        @Override
-        public long skip(long n) throws IOException {
-            return delegated.skip(n);
-        }
-
-        @Override
-        public int available() throws IOException {
-            return delegated.available();
         }
 
         @Override
@@ -136,22 +111,7 @@ public class SmartFilter extends ClientFilter {
                     closed = true;
                 }
             }
-            delegated.close();
-        }
-
-        @Override
-        public void mark(int readlimit) {
-            delegated.mark(readlimit);
-        }
-
-        @Override
-        public void reset() throws IOException {
-            delegated.reset();
-        }
-
-        @Override
-        public boolean markSupported() {
-            return delegated.markSupported();
+            super.close();
         }
     }
 }

@@ -26,15 +26,8 @@
  */
 package com.emc.rest.smart;
 
-import java.util.List;
+import java.util.Map;
 
-public interface HostListProvider {
-    List<Host> getHostList();
-
-    /**
-     * If this completes without throwing an exception, the host is considered healthy
-     * (<code>host.setHealthy(true)</code> is called). Otherwise, the host is considered unhealthy/down
-     * (<code>host.setHealthy(false)</code> is called).
-     */
-    void runHealthCheck(Host host);
+public interface HostVetoRule {
+    boolean shouldVeto(Host host, Map<String, Object> requestProperties);
 }

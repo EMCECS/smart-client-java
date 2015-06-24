@@ -24,17 +24,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package com.emc.rest.smart;
+@XmlSchema(namespace = "http://s3.amazonaws.com/doc/2006-03-01/", elementFormDefault = javax.xml.bind.annotation.XmlNsForm.QUALIFIED)
+package com.emc.rest.smart.ecs;
 
-import java.util.List;
-
-public interface HostListProvider {
-    List<Host> getHostList();
-
-    /**
-     * If this completes without throwing an exception, the host is considered healthy
-     * (<code>host.setHealthy(true)</code> is called). Otherwise, the host is considered unhealthy/down
-     * (<code>host.setHealthy(false)</code> is called).
-     */
-    void runHealthCheck(Host host);
-}
+import javax.xml.bind.annotation.XmlSchema;

@@ -26,33 +26,34 @@
  */
 package com.emc.rest.smart;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.*;
 
 public class LoadBalancer {
-    private final Queue<Host> hosts = new ConcurrentLinkedQueue<Host>();
+    private final Queue<Host> hosts = new ArrayDeque<Host>();
+    private List<HostVetoRule> vetoRules;
 
-    public LoadBalancer(List<String> initialHosts) {
+    public LoadBalancer(List<Host> initialHosts) {
 
         // seed the host map
-        for (String host : initialHosts) {
-            hosts.add(new Host(host));
-        }
+        hosts.addAll(initialHosts);
     }
 
     /**
      * Returns the host with the lowest response index.
      */
-    public Host getTopHost() {
+    public Host getTopHost(Map<String, Object> requestProperties) {
         Host topHost = null;
 
         long lowestIndex = Long.MAX_VALUE;
 
         synchronized (hosts) {
             for (Host host : hosts) {
+
+                // apply any veto rules
+                if (shouldVeto(host, requestProperties)) continue;
+
+                // if the host is unhealthy/down, ignore it
+                if (!host.isHealthy()) continue;
 
                 // get response index for a host
                 long hostIndex = host.getResponseIndex();
@@ -72,16 +73,41 @@ public class LoadBalancer {
         return topHost;
     }
 
+    protected boolean shouldVeto(Host host, Map<String, Object> requestProperties) {
+        if (vetoRules != null) {
+            for (HostVetoRule vetoRule : vetoRules) {
+                if (vetoRule.shouldVeto(host, requestProperties)) return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Returns a list of all known hosts. This list is a clone; modification will not affect the load balancer
+     */
+    public synchronized List<Host> getAllHosts() {
+        return new ArrayList<Host>(hosts);
+    }
+
     /**
      * Returns stats for all active hosts in this load balancer
      */
-    public HostStats[] getHostStats() {
+    public synchronized HostStats[] getHostStats() {
         return hosts.toArray(new HostStats[hosts.size()]);
     }
 
-    protected void updateHosts(List<String> updatedHosts) throws Exception {
+    /**
+     * Resets connection metrics. Use with care!
+     */
+    public void resetStats() {
+        for (Host host : getAllHosts()) {
+            host.resetStats();
+        }
+    }
+
+    protected void updateHosts(List<Host> updatedHosts) throws Exception {
         // don't modify the parameter
-        List<String> hostList = new ArrayList<String>(updatedHosts);
+        List<Host> hostList = new ArrayList<Host>(updatedHosts);
 
         synchronized (hosts) {
             // remove hosts from stored list that are not present in updated list
@@ -90,10 +116,10 @@ public class LoadBalancer {
             while (hostI.hasNext()) {
                 Host host = hostI.next();
                 boolean stillThere = false;
-                Iterator<String> hostListI = hostList.iterator();
+                Iterator<Host> hostListI = hostList.iterator();
                 while (hostListI.hasNext()) {
-                    String hostFromUpdate = hostListI.next();
-                    if (host.getName().equalsIgnoreCase(hostFromUpdate)) {
+                    Host hostFromUpdate = hostListI.next();
+                    if (host.equals(hostFromUpdate)) {
 
                         // this host is in both the stored list and the updated list
                         stillThere = true;
@@ -107,9 +133,22 @@ public class LoadBalancer {
             }
 
             // what's left in the updated list are new hosts, so add them
-            for (String newHost : hostList) {
-                hosts.add(new Host(newHost));
+            for (Host newHost : hostList) {
+                hosts.add(newHost);
             }
         }
+    }
+
+    public List<HostVetoRule> getVetoRules() {
+        return vetoRules;
+    }
+
+    public void setVetoRules(List<HostVetoRule> vetoRules) {
+        this.vetoRules = vetoRules;
+    }
+
+    public LoadBalancer withVetoRules(HostVetoRule... vetoRules) {
+        setVetoRules(Arrays.asList(vetoRules));
+        return this;
     }
 }

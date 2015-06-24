@@ -29,8 +29,8 @@ package com.emc.rest.smart;
 import org.apache.log4j.LogMF;
 import org.apache.log4j.Logger;
 
+import java.util.ArrayDeque;
 import java.util.Date;
-import java.util.LinkedList;
 import java.util.Queue;
 
 /**
@@ -46,12 +46,13 @@ import java.util.Queue;
 public class Host implements HostStats {
     private static final Logger l4j = Logger.getLogger(Host.class);
 
-    protected static final int DEFAULT_RESPONSE_WINDOW_SIZE = 20;
-    protected static final int DEFAULT_ERROR_COOL_DOWN_SECS = 30;
+    public static final int DEFAULT_RESPONSE_WINDOW_SIZE = 25;
+    public static final int DEFAULT_ERROR_COOL_DOWN_SECS = 10;
 
     private String name;
-    protected int responseWindowSize;
-    protected int errorCoolDownSecs;
+    private boolean healthy = true;
+    protected int responseWindowSize = DEFAULT_RESPONSE_WINDOW_SIZE;
+    protected int errorCoolDownSecs = DEFAULT_ERROR_COOL_DOWN_SECS;
 
     protected int openConnections;
     protected long lastConnectionTime;
@@ -60,24 +61,13 @@ public class Host implements HostStats {
     protected long consecutiveErrors;
     protected long responseQueueAverage;
 
-    protected Queue<Long> responseQueue = new LinkedList<Long>();
+    protected Queue<Long> responseQueue = new ArrayDeque<Long>();
 
     /**
-     * Uses a default error cool down of 30 secs and a response window size of 20.
+     * @param name the host name or IP address of this host
      */
     public Host(String name) {
-        this(name, DEFAULT_RESPONSE_WINDOW_SIZE, DEFAULT_ERROR_COOL_DOWN_SECS);
-    }
-
-    /**
-     * @param name              the host name or IP address of this host
-     * @param errorCoolDownSecs the cool down period for errors (number of seconds after an error when the host is
-     *                          considered normalized). compounded for multiple consecutive errors
-     */
-    public Host(String name, int responseWindowSize, int errorCoolDownSecs) {
         this.name = name;
-        this.responseWindowSize = responseWindowSize;
-        this.errorCoolDownSecs = errorCoolDownSecs;
     }
 
     public synchronized void connectionOpened() {
@@ -102,7 +92,7 @@ public class Host implements HostStats {
 
         // log response time
         responseQueue.add(duration);
-        if (responseQueue.size() > responseWindowSize)
+        while (responseQueue.size() > responseWindowSize)
             responseQueue.remove();
 
         // recalculate average
@@ -120,17 +110,39 @@ public class Host implements HostStats {
         return name;
     }
 
-    public synchronized long getResponseIndex() {
-        // error adjustment adjust the index up based on the number of consecutive errors
-        long errorAdjustment = consecutiveErrors * errorCoolDownSecs * 1000;
+    public boolean isHealthy() {
+        return healthy;
+    }
 
-        // open connection adjustment adjusts the index up based on the number of open connections to the host
-        long openConnectionAdjustment = openConnections * errorCoolDownSecs; // cool down secs as ms instead
+    public void setHealthy(boolean healthy) {
+        this.healthy = healthy;
+    }
 
-        // dormant adjustment adjusts the index down based on how long it's been since the host was last used
-        long msSinceLastUse = System.currentTimeMillis() - lastConnectionTime;
+    public long getResponseIndex() {
+        long currentTime = System.currentTimeMillis();
 
-        return responseQueueAverage + errorAdjustment + openConnectionAdjustment - msSinceLastUse;
+        synchronized (this) {
+            // error adjustment adjust the index up based on the number of consecutive errors
+            long errorAdjustment = consecutiveErrors * errorCoolDownSecs * 1000;
+
+            // open connection adjustment adjusts the index up based on the number of open connections to the host
+            long openConnectionAdjustment = openConnections * errorCoolDownSecs; // cool down secs as ms instead
+
+            // dormant adjustment adjusts the index down based on how long it's been since the host was last used
+            long msSinceLastUse = currentTime - lastConnectionTime;
+
+            return responseQueueAverage + errorAdjustment + openConnectionAdjustment - msSinceLastUse;
+        }
+    }
+
+    /**
+     * Resets historical metrics. Use with care!
+     */
+    public synchronized void resetStats() {
+        totalConnections = openConnections;
+        totalErrors = 0;
+        consecutiveErrors = 0;
+        responseQueueAverage = 0;
     }
 
     @Override
@@ -158,9 +170,54 @@ public class Host implements HostStats {
         return responseQueueAverage;
     }
 
+    public long getConsecutiveErrors() {
+        return consecutiveErrors;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Host)) return false;
+
+        Host host = (Host) o;
+
+        return getName().equals(host.getName());
+    }
+
+    @Override
+    public int hashCode() {
+        return getName().hashCode();
+    }
+
     @Override
     public String toString() {
         return String.format("%s{totalConnections=%d, totalErrors=%d, openConnections=%d, lastConnectionTime=%s, responseQueueAverage=%d}",
                 name, totalConnections, totalErrors, openConnections, new Date(lastConnectionTime).toString(), responseQueueAverage);
+    }
+
+    public int getResponseWindowSize() {
+        return responseWindowSize;
+    }
+
+    public void setResponseWindowSize(int responseWindowSize) {
+        this.responseWindowSize = responseWindowSize;
+    }
+
+    public int getErrorCoolDownSecs() {
+        return errorCoolDownSecs;
+    }
+
+    public void setErrorCoolDownSecs(int errorCoolDownSecs) {
+        this.errorCoolDownSecs = errorCoolDownSecs;
+    }
+
+    public Host withResponseWindowSize(int responseWindowSize) {
+        setResponseWindowSize(responseWindowSize);
+        return this;
+    }
+
+    public Host withErrorCoolDownSecs(int errorCoolDownSecs) {
+        setErrorCoolDownSecs(errorCoolDownSecs);
+        return this;
     }
 }

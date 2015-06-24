@@ -72,9 +72,9 @@ public class SmartClientTest {
         String[] endpoints = endpointStr.split(",");
         final URI serverUri = new URI(endpointStr.split(",")[0]);
 
-        List<String> initialHosts = new ArrayList<String>();
+        List<Host> initialHosts = new ArrayList<Host>();
         for (String endpoint : endpoints) {
-            initialHosts.add(new URI(endpoint).getHost());
+            initialHosts.add(new Host(new URI(endpoint).getHost()));
         }
 
         SmartConfig smartConfig = new SmartConfig(initialHosts);
