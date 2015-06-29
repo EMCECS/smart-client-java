@@ -28,65 +28,20 @@ package com.emc.rest.smart.ecs;
 
 import com.emc.rest.smart.Host;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+public class VdcHost extends Host {
+    private Vdc vdc;
 
-public class Vdc implements Iterable<VdcHost> {
-    private String name;
-    private List<VdcHost> hosts;
-
-    public Vdc(String... hostNames) {
-        this.name = hostNames[0];
-        hosts = new ArrayList<VdcHost>();
-        for (String hostName : hostNames) {
-            hosts.add(new VdcHost(this, hostName));
-        }
-    }
-
-    public Vdc(List<Host> hosts) {
-        this(hosts.get(0).getName(), hosts);
-    }
-
-    public Vdc(String name, List<Host> hosts) {
-        this.name = name;
-        this.hosts = createVdcHosts(hosts);
+    public VdcHost(Vdc vdc, String name) {
+        super(name);
+        this.vdc = vdc;
     }
 
     @Override
-    public Iterator<VdcHost> iterator() {
-        return hosts.iterator();
+    public String toString() {
+        return vdc.getName() + ":" + super.toString();
     }
 
-    public boolean isHealthy() {
-        for (Host host : hosts) {
-            if (!host.isHealthy()) return false;
-        }
-        return true;
-    }
-
-    protected List<VdcHost> createVdcHosts(List<Host> hosts) {
-        List<VdcHost> vdcHosts = new ArrayList<VdcHost>();
-        for (Host host : hosts) {
-            vdcHosts.add(new VdcHost(this, host.getName()));
-        }
-        return vdcHosts;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public List<VdcHost> getHosts() {
-        return hosts;
-    }
-
-    public Vdc withName(String name) {
-        setName(name);
-        return this;
+    public Vdc getVdc() {
+        return vdc;
     }
 }

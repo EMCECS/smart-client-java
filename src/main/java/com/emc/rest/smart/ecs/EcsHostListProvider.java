@@ -162,7 +162,7 @@ public class EcsHostListProvider implements HostListProvider {
 
         // we need to maintain references to existing hosts to preserve health status, which is managed by the load
         // balancer
-        for (Iterator<Host> vdcI = vdc.iterator(); vdcI.hasNext(); ) {
+        for (Iterator<VdcHost> vdcI = vdc.iterator(); vdcI.hasNext(); ) {
             Host vdcHost = vdcI.next();
             boolean hostPresent = false;
             for (Iterator<Host> nodeI = nodeList.iterator(); nodeI.hasNext(); ) {
@@ -185,7 +185,7 @@ public class EcsHostListProvider implements HostListProvider {
         // add any remaining new hosts we weren't previously aware of
         for (Host node : nodeList) {
             l4j.info("adding host " + node.getName() + " to VDC " + vdc.getName());
-            vdc.getHosts().add(node);
+            vdc.getHosts().add(new VdcHost(vdc, node.getName()));
         }
     }
 
