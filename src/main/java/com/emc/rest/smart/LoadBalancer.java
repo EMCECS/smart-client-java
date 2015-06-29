@@ -105,6 +105,30 @@ public class LoadBalancer {
         }
     }
 
+    public long getTotalConnections() {
+        long totalConnections = 0;
+        for (Host host : getAllHosts()) {
+            totalConnections += host.getTotalConnections();
+        }
+        return totalConnections;
+    }
+
+    public long getTotalErrors() {
+        long totalErrors = 0;
+        for (Host host : getAllHosts()) {
+            totalErrors += host.getTotalErrors();
+        }
+        return totalErrors;
+    }
+
+    public long getOpenConnections() {
+        long openConnections = 0;
+        for (Host host : getAllHosts()) {
+            openConnections += host.getOpenConnections();
+        }
+        return openConnections;
+    }
+
     protected void updateHosts(List<Host> updatedHosts) throws Exception {
         // don't modify the parameter
         List<Host> hostList = new ArrayList<Host>(updatedHosts);
