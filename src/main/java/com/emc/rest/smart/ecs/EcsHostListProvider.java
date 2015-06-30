@@ -160,13 +160,19 @@ public class EcsHostListProvider implements HostListProvider {
     protected void updateVdcNodes(Vdc vdc, List<Host> nodeList) {
         if (nodeList == null || nodeList.isEmpty()) throw new RuntimeException("node list is empty");
 
+        // make sure the hosts are associated with the VDC first
+        List<VdcHost> vdcNodeList = new ArrayList<VdcHost>();
+        for (Host host : nodeList) {
+            vdcNodeList.add(new VdcHost(vdc, host.getName()));
+        }
+
         // we need to maintain references to existing hosts to preserve health status, which is managed by the load
         // balancer
-        for (Iterator<Host> vdcI = vdc.iterator(); vdcI.hasNext(); ) {
-            Host vdcHost = vdcI.next();
+        for (Iterator<VdcHost> vdcI = vdc.iterator(); vdcI.hasNext(); ) {
+            VdcHost vdcHost = vdcI.next();
             boolean hostPresent = false;
-            for (Iterator<Host> nodeI = nodeList.iterator(); nodeI.hasNext(); ) {
-                Host node = nodeI.next();
+            for (Iterator<VdcHost> nodeI = vdcNodeList.iterator(); nodeI.hasNext(); ) {
+                VdcHost node = nodeI.next();
 
                 // already aware of this node; remove from new node list
                 if (vdcHost.equals(node)) {
@@ -183,9 +189,9 @@ public class EcsHostListProvider implements HostListProvider {
         }
 
         // add any remaining new hosts we weren't previously aware of
-        for (Host node : nodeList) {
+        for (VdcHost node : vdcNodeList) {
             l4j.info("adding host " + node.getName() + " to VDC " + vdc.getName());
-            vdc.getHosts().add(node);
+            vdc.getHosts().add(new VdcHost(vdc, node.getName()));
         }
     }
 
