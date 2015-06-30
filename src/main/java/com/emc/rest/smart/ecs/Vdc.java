@@ -73,6 +73,22 @@ public class Vdc implements Iterable<VdcHost> {
         return vdcHosts;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Vdc)) return false;
+
+        Vdc vdc = (Vdc) o;
+
+        return getName().equals(vdc.getName());
+
+    }
+
+    @Override
+    public int hashCode() {
+        return getName().hashCode();
+    }
+
     public String getName() {
         return name;
     }

@@ -37,6 +37,25 @@ public class VdcHost extends Host {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof VdcHost)) return false;
+        if (!super.equals(o)) return false;
+
+        VdcHost vdcHost = (VdcHost) o;
+
+        return getVdc().equals(vdcHost.getVdc());
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = super.hashCode();
+        result = 31 * result + getVdc().hashCode();
+        return result;
+    }
+
+    @Override
     public String toString() {
         return vdc.getName() + ":" + super.toString();
     }
