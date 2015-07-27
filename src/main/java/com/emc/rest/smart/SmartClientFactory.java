@@ -36,7 +36,7 @@ import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import com.sun.jersey.core.impl.provider.entity.ByteArrayProvider;
 import com.sun.jersey.core.impl.provider.entity.FileProvider;
 import com.sun.jersey.core.impl.provider.entity.InputStreamProvider;
-import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
+import org.apache.http.impl.conn.PoolingClientConnectionManager;
 
 public final class SmartClientFactory {
     public static Client createSmartClient(SmartConfig smartConfig) {
@@ -105,7 +105,7 @@ public final class SmartClientFactory {
         ClientConfig clientConfig = new DefaultClientConfig();
 
         // set up multi-threaded connection pool
-        ThreadSafeClientConnManager connectionManager = new ThreadSafeClientConnManager();
+        PoolingClientConnectionManager connectionManager = new PoolingClientConnectionManager();
         // 200 maximum active connections (should be more than enough for any JVM instance)
         connectionManager.setDefaultMaxPerRoute(200);
         connectionManager.setMaxTotal(200);
