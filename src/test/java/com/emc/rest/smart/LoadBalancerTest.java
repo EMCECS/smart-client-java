@@ -47,14 +47,14 @@ public class LoadBalancerTest {
     @Test
     public void testDistribution() throws Exception {
         String[] hostList = new String[]{"foo", "bar", "baz", "biz"};
-        final int callCount = 1000, callDuration = 50;
+        final int callCount = 1000;
 
         SmartConfig smartConfig = new SmartConfig(hostList);
         smartConfig.setPollInterval(1);
 
         final LoadBalancer loadBalancer = smartConfig.getLoadBalancer();
 
-        RequestSimulator simulator = new RequestSimulator(loadBalancer, callCount, callDuration);
+        RequestSimulator simulator = new RequestSimulator(loadBalancer, callCount);
         simulator.run();
 
         Assert.assertEquals("errors during call simulation", 0, simulator.getErrors().size());
@@ -63,7 +63,6 @@ public class LoadBalancerTest {
 
         for (HostStats stats : loadBalancer.getHostStats()) {
             Assert.assertTrue("unbalanced call count", Math.abs(callCount / hostList.length - stats.getTotalConnections()) <= 3);
-            Assert.assertEquals("average response wrong", callDuration, stats.getResponseQueueAverage());
         }
     }
 
@@ -113,7 +112,7 @@ public class LoadBalancerTest {
             long start = System.nanoTime();
             Host host = loadBalancer.getTopHost(null);
             host.connectionOpened();
-            host.callComplete(0, false);
+            host.callComplete(false);
             host.connectionClosed();
             return System.nanoTime() - start;
         }

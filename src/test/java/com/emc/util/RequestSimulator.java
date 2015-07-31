@@ -30,7 +30,6 @@ import com.emc.rest.smart.Host;
 import com.emc.rest.smart.LoadBalancer;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
@@ -40,14 +39,12 @@ import java.util.concurrent.Future;
 public class RequestSimulator implements Runnable {
     private LoadBalancer loadBalancer;
     private int callCount;
-    private int callDuration;
     private RequestExecutor requestExecutor;
     private List<Throwable> errors = new ArrayList<Throwable>();
 
-    public RequestSimulator(LoadBalancer loadBalancer, int callCount, int callDuration) {
+    public RequestSimulator(LoadBalancer loadBalancer, int callCount) {
         this.loadBalancer = loadBalancer;
         this.callCount = callCount;
-        this.callDuration = callDuration;
     }
 
     @Override
@@ -74,9 +71,9 @@ public class RequestSimulator implements Runnable {
                     host.connectionOpened();
                     try {
                         if (requestExecutor != null) requestExecutor.execute(host);
-                        host.callComplete(callDuration, false);
+                        host.callComplete(false);
                     } catch (Throwable t) {
-                        host.callComplete(callDuration, true);
+                        host.callComplete(true);
                     }
                     host.connectionClosed();
                 }

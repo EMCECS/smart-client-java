@@ -33,13 +33,13 @@ public class HostTest {
     @Test
     public void testHost() throws Exception {
         Host host = new Host("foo");
-        int errorCoolDown = host.getErrorCoolDownSecs();
+        int errorWaitTime = host.getErrorWaitTime();
 
         // simulate some calls
-        int callCount = 100, duration = 50;
+        int callCount = 100;
         for (int i = 0; i < callCount; i++) {
             host.connectionOpened();
-            host.callComplete(duration, false);
+            host.callComplete(false);
             host.connectionClosed();
         }
 
@@ -47,51 +47,78 @@ public class HostTest {
         Assert.assertEquals(0, host.getTotalErrors());
         Assert.assertEquals(0, host.getConsecutiveErrors());
         Assert.assertEquals(0, host.getOpenConnections());
-        Assert.assertEquals(duration, host.getResponseQueueAverage());
-        Assert.assertTrue(duration - host.getResponseIndex() <= 1); // 1ms margin of error (execution time)
+        Assert.assertEquals(0, host.getResponseIndex());
 
         // test open connections
         host.connectionOpened();
         host.connectionOpened();
 
         Assert.assertEquals(2, host.getOpenConnections());
+        Assert.assertEquals(2, host.getResponseIndex());
 
         // test error
-        host.callComplete(duration, true);
+        host.callComplete(false);
+        host.connectionClosed();
+        host.callComplete(true);
         host.connectionClosed();
 
-        Assert.assertEquals(1, host.getOpenConnections());
+        Assert.assertEquals(0, host.getOpenConnections());
         Assert.assertEquals(1, host.getConsecutiveErrors());
         Assert.assertEquals(1, host.getTotalErrors());
-        Assert.assertEquals(duration, host.getResponseQueueAverage());
-        // response average + (errors * error-cool-down-in-secs) + (open-connections * error-cool-down-in-ms)
-        Assert.assertTrue(host.getResponseIndex() - (50 + errorCoolDown * 1000 + errorCoolDown) <= 1); // 1ms margin of error (execution time)
+        Assert.assertEquals(0, host.getResponseIndex());
+        Assert.assertFalse(host.isHealthy()); // host should enter cool down period for error
+
+        Thread.sleep(errorWaitTime - 500); // wait until just before the error is cooled down
+        Assert.assertFalse(host.isHealthy()); // host should still be in cool down period
+
+        Thread.sleep(500); // wait until cool down period is over
+        Assert.assertTrue(host.isHealthy());
 
         // test another error
-        host.callComplete(duration, true);
+        host.connectionOpened();
+        host.callComplete(true);
         host.connectionClosed();
 
         Assert.assertEquals(0, host.getOpenConnections());
         Assert.assertEquals(2, host.getConsecutiveErrors());
         Assert.assertEquals(2, host.getTotalErrors());
-        Assert.assertEquals(duration, host.getResponseQueueAverage());
-        // response average + (errors * error-cool-down-in-secs) + (open-connections * error-cool-down-in-ms)
-        Assert.assertTrue(host.getResponseIndex() - (50 + 2 * errorCoolDown * 1000) <= 1); // 1ms margin of error (execution time)
+        Assert.assertEquals(0, host.getResponseIndex());
+        Assert.assertFalse(host.isHealthy());
 
-        // test cool-down
-        Thread.sleep(500);
+        // cool down should be compounded for consecutive errors (multiplied by powers of 2)
+        Thread.sleep(2 * errorWaitTime - 500); // wait until just before cool down is over
+        Assert.assertFalse(host.isHealthy());
 
-        Assert.assertTrue(host.getResponseIndex() - (50 + 2 * errorCoolDown * 1000 - 500) <= 1); // 1ms margin of error (execution time)
+        Thread.sleep(500); // wait until cool down period is over
+        Assert.assertTrue(host.isHealthy());
+
+        // test one more error
+        host.connectionOpened();
+        host.callComplete(true);
+        host.connectionClosed();
+
+        Assert.assertEquals(0, host.getOpenConnections());
+        Assert.assertEquals(3, host.getConsecutiveErrors());
+        Assert.assertEquals(3, host.getTotalErrors());
+        Assert.assertEquals(0, host.getResponseIndex());
+        Assert.assertFalse(host.isHealthy());
+
+        // cool down should be compounded for consecutive errors (multiplied by powers of 2)
+        Thread.sleep(2 * 2 * errorWaitTime - 500); // wait until just before cool down is over
+        Assert.assertFalse(host.isHealthy());
+
+        Thread.sleep(500); // wait until cool down period is over
+        Assert.assertTrue(host.isHealthy());
 
         // test no more errors
         host.connectionOpened();
-        host.callComplete(duration, false);
+        host.callComplete(false);
         host.connectionClosed();
 
         Assert.assertEquals(0, host.getConsecutiveErrors());
-        Assert.assertEquals(2, host.getTotalErrors());
-        Assert.assertEquals(callCount + 3, host.getTotalConnections());
-        Assert.assertEquals(duration, host.getResponseQueueAverage());
-        Assert.assertTrue(host.getResponseIndex() - 50 <= 1); // 1ms margin of error (execution time)
+        Assert.assertEquals(3, host.getTotalErrors());
+        Assert.assertEquals(callCount + 5, host.getTotalConnections());
+        Assert.assertEquals(0, host.getResponseIndex());
+        Assert.assertTrue(host.isHealthy());
     }
 }
