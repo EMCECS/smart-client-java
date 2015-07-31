@@ -27,10 +27,9 @@
 package com.emc.rest.smart;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentLinkedDeque;
 
 public class LoadBalancer {
-    private final Deque<Host> hosts = new ConcurrentLinkedDeque<Host>();
+    private final Deque<Host> hosts = new ArrayDeque<Host>();
     private List<HostVetoRule> vetoRules;
 
     public LoadBalancer(List<Host> initialHosts) {
@@ -86,14 +85,14 @@ public class LoadBalancer {
     /**
      * Returns a list of all known hosts. This list is a clone; modification will not affect the load balancer
      */
-    public List<Host> getAllHosts() {
+    public synchronized List<Host> getAllHosts() {
         return new ArrayList<Host>(hosts);
     }
 
     /**
      * Returns stats for all active hosts in this load balancer
      */
-    public HostStats[] getHostStats() {
+    public synchronized HostStats[] getHostStats() {
         return hosts.toArray(new HostStats[hosts.size()]);
     }
 
@@ -130,35 +129,40 @@ public class LoadBalancer {
         return openConnections;
     }
 
+    /**
+     * Ensure this method is called sparingly as it will block getTopHost() calls, pausing all new connections!
+     */
     protected void updateHosts(List<Host> updatedHosts) throws Exception {
         // don't modify the parameter
         List<Host> hostList = new ArrayList<Host>(updatedHosts);
 
         // remove hosts from stored list that are not present in updated list
         // remove hosts in updated list that are already present in stored list
-        Iterator<Host> hostI = hosts.iterator();
-        while (hostI.hasNext()) {
-            Host host = hostI.next();
-            boolean stillThere = false;
-            Iterator<Host> hostListI = hostList.iterator();
-            while (hostListI.hasNext()) {
-                Host hostFromUpdate = hostListI.next();
-                if (host.equals(hostFromUpdate)) {
+        synchronized (hosts) {
+            Iterator<Host> hostI = hosts.iterator();
+            while (hostI.hasNext()) {
+                Host host = hostI.next();
+                boolean stillThere = false;
+                Iterator<Host> hostListI = hostList.iterator();
+                while (hostListI.hasNext()) {
+                    Host hostFromUpdate = hostListI.next();
+                    if (host.equals(hostFromUpdate)) {
 
-                    // this host is in both the stored list and the updated list
-                    stillThere = true;
-                    hostListI.remove();
-                    break;
+                        // this host is in both the stored list and the updated list
+                        stillThere = true;
+                        hostListI.remove();
+                        break;
+                    }
                 }
+
+                // this host doesn't appear in the updated list, so remove it
+                if (!stillThere) hostI.remove();
             }
 
-            // this host doesn't appear in the updated list, so remove it
-            if (!stillThere) hostI.remove();
-        }
-
-        // what's left in the updated list are new hosts, so add them
-        for (Host newHost : hostList) {
-            hosts.add(newHost);
+            // what's left in the updated list are new hosts, so add them
+            for (Host newHost : hostList) {
+                hosts.add(newHost);
+            }
         }
     }
 

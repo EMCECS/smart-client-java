@@ -97,7 +97,7 @@ public class LoadBalancerTest {
         LogMF.warn(l4j, "per call overhead: {0}µs", perCallOverhead / 1000);
         hostLogger.setLevel(logLevel);
 
-        Assert.assertTrue("call overhead too high", perCallOverhead < 500000); // must be less than .5ms
+        Assert.assertTrue("call overhead too high", perCallOverhead < 100000); // must be less than .1ms
     }
 
     class LBOverheadTask implements Callable<Long> {
