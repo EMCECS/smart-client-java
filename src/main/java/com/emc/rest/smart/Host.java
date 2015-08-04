@@ -33,7 +33,7 @@ import java.util.Date;
 
 /**
  * Some basic statements about response index calculation:
- * <p/>
+ * <p>
  * - lower response index means the host is more likely to be used
  * - should be based primarily on number of open connections to the host
  * - an error will mark the host as unhealthy for <code>errorWaitTime</code> milliseconds
