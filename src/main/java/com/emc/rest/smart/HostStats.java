@@ -40,7 +40,4 @@ public interface HostStats {
 
     @SuppressWarnings("unused")
     Date getLastConnectionTime();
-
-    @SuppressWarnings("unused")
-    long getResponseQueueAverage();
 }

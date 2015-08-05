@@ -40,7 +40,7 @@ public class TestHealthCheck {
     @Test
     public void testUnhealthyHostIgnored() throws Exception {
         String[] hostList = new String[]{"foo", "bar", "baz", "biz"};
-        final int callCount = 1000, callDuration = 50;
+        final int callCount = 1000;
 
         SmartConfig smartConfig = new SmartConfig(hostList);
         smartConfig.setPollInterval(1);
@@ -51,7 +51,7 @@ public class TestHealthCheck {
         Host foo = loadBalancer.getAllHosts().get(0);
         foo.setHealthy(false);
 
-        RequestSimulator simulator = new RequestSimulator(loadBalancer, callCount, callDuration);
+        RequestSimulator simulator = new RequestSimulator(loadBalancer, callCount);
         simulator.run();
 
         Assert.assertEquals("errors during call simulation", 0, simulator.getErrors().size());
@@ -63,7 +63,6 @@ public class TestHealthCheck {
                 Assert.assertEquals("unhealthy host should be ignored", 0, stats.getTotalConnections());
             } else {
                 Assert.assertTrue("unbalanced call count", Math.abs(callCount / (hostList.length - 1) - stats.getTotalConnections()) <= 3);
-                Assert.assertEquals("average response wrong", callDuration, stats.getResponseQueueAverage());
             }
         }
     }
@@ -71,7 +70,7 @@ public class TestHealthCheck {
     @Test
     public void testHealthyUpdate() throws Exception {
         String[] hostList = new String[]{"foo", "bar", "baz", "biz"};
-        final int callCount = 1000, callDuration = 50;
+        final int callCount = 1000;
 
         SmartConfig smartConfig = new SmartConfig(hostList);
 
@@ -93,7 +92,7 @@ public class TestHealthCheck {
         Assert.assertEquals(4, loadBalancer.getAllHosts().size());
 
         // simulate calls
-        RequestSimulator simulator = new RequestSimulator(loadBalancer, callCount, callDuration);
+        RequestSimulator simulator = new RequestSimulator(loadBalancer, callCount);
         simulator.run();
 
         Assert.assertEquals("errors during call simulation", 0, simulator.getErrors().size());
@@ -105,7 +104,6 @@ public class TestHealthCheck {
                 Assert.assertEquals("unhealthy host should be ignored", 0, stats.getTotalConnections());
             } else {
                 Assert.assertTrue("unbalanced call count", Math.abs(callCount / (hostList.length - 1) - stats.getTotalConnections()) <= 3);
-                Assert.assertEquals("average response wrong", callDuration, stats.getResponseQueueAverage());
             }
         }
 
@@ -121,7 +119,7 @@ public class TestHealthCheck {
 
         // reset stats and simulate calls
         loadBalancer.resetStats();
-        simulator = new RequestSimulator(loadBalancer, callCount, callDuration);
+        simulator = new RequestSimulator(loadBalancer, callCount);
         simulator.run();
 
         Assert.assertEquals("errors during call simulation", 0, simulator.getErrors().size());
@@ -130,7 +128,6 @@ public class TestHealthCheck {
 
         for (HostStats stats : loadBalancer.getHostStats()) {
             Assert.assertTrue("unbalanced call count", Math.abs(callCount / hostList.length - stats.getTotalConnections()) <= 3);
-            Assert.assertEquals("average response wrong", callDuration, stats.getResponseQueueAverage());
         }
     }
 

@@ -30,6 +30,8 @@ import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientRequest;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.filter.ClientFilter;
+import org.apache.http.HttpHost;
+import org.apache.http.client.utils.URIUtils;
 
 import java.io.FilterInputStream;
 import java.io.IOException;
@@ -60,22 +62,20 @@ public class SmartFilter extends ClientFilter {
         // replace the host in the request
         URI uri = request.getURI();
         try {
-            uri = new URI(uri.getScheme(), uri.getUserInfo(), host.getName(), uri.getPort(),
-                    uri.getPath(), uri.getQuery(), uri.getFragment());
+            uri = URIUtils.rewriteURI(uri, new HttpHost(host.getName(), uri.getPort(), uri.getScheme()));
         } catch (URISyntaxException e) {
             throw new RuntimeException("load-balanced host generated invalid URI", e);
         }
         request.setURI(uri);
 
         // track requests stats for LB ranking
-        Long startTime = System.currentTimeMillis();
         host.connectionOpened(); // not really, but we can't (cleanly) intercept any lower than this
         try {
             // call to delegate
             ClientResponse response = getNext().handle(request);
 
             // capture request stats
-            host.callComplete((int) (System.currentTimeMillis() - startTime), false);
+            host.callComplete(false);
 
             // wrap the input stream so we can capture the actual connection close
             response.setEntityInputStream(new WrappedInputStream(response.getEntityInputStream(), host));
@@ -84,7 +84,7 @@ public class SmartFilter extends ClientFilter {
         } catch (RuntimeException e) {
 
             // capture requests stats (error)
-            host.callComplete((int) (System.currentTimeMillis() - startTime), true);
+            host.callComplete(true);
             host.connectionClosed();
 
             throw e;

@@ -29,7 +29,7 @@ package com.emc.rest.smart;
 import java.util.*;
 
 public class LoadBalancer {
-    private final Queue<Host> hosts = new ArrayDeque<Host>();
+    private final Deque<Host> hosts = new ArrayDeque<Host>();
     private List<HostVetoRule> vetoRules;
 
     public LoadBalancer(List<Host> initialHosts) {
@@ -129,13 +129,16 @@ public class LoadBalancer {
         return openConnections;
     }
 
+    /**
+     * Ensure this method is called sparingly as it will block getTopHost() calls, pausing all new connections!
+     */
     protected void updateHosts(List<Host> updatedHosts) throws Exception {
         // don't modify the parameter
         List<Host> hostList = new ArrayList<Host>(updatedHosts);
 
+        // remove hosts from stored list that are not present in updated list
+        // remove hosts in updated list that are already present in stored list
         synchronized (hosts) {
-            // remove hosts from stored list that are not present in updated list
-            // remove hosts in updated list that are already present in stored list
             Iterator<Host> hostI = hosts.iterator();
             while (hostI.hasNext()) {
                 Host host = hostI.next();

@@ -44,11 +44,11 @@ public class Vdc implements Iterable<VdcHost> {
         }
     }
 
-    public Vdc(List<Host> hosts) {
+    public Vdc(List<? extends Host> hosts) {
         this(hosts.get(0).getName(), hosts);
     }
 
-    public Vdc(String name, List<Host> hosts) {
+    public Vdc(String name, List<? extends Host> hosts) {
         this.name = name;
         this.hosts = createVdcHosts(hosts);
     }
@@ -65,7 +65,7 @@ public class Vdc implements Iterable<VdcHost> {
         return true;
     }
 
-    protected List<VdcHost> createVdcHosts(List<Host> hosts) {
+    protected List<VdcHost> createVdcHosts(List<? extends Host> hosts) {
         List<VdcHost> vdcHosts = new ArrayList<VdcHost>();
         for (Host host : hosts) {
             vdcHosts.add(new VdcHost(this, host.getName()));
