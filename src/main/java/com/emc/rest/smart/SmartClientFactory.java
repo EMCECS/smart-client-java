@@ -37,8 +37,11 @@ import com.sun.jersey.core.impl.provider.entity.ByteArrayProvider;
 import com.sun.jersey.core.impl.provider.entity.FileProvider;
 import com.sun.jersey.core.impl.provider.entity.InputStreamProvider;
 import org.apache.http.impl.conn.PoolingClientConnectionManager;
+import org.apache.log4j.Logger;
 
 public final class SmartClientFactory {
+    private static final Logger l4j = Logger.getLogger(SmartClientFactory.class);
+
     public static Client createSmartClient(SmartConfig smartConfig) {
         return createSmartClient(smartConfig, createApacheClientHandler(smartConfig));
     }
@@ -96,9 +99,31 @@ public final class SmartClientFactory {
         clientConfig.getClasses().add(InputStreamProvider.class);
 
         // build Jersey client
-        Client client = new Client(clientHandler, clientConfig);
+        return new Client(clientHandler, clientConfig);
+    }
 
-        return client;
+    /**
+     * Destroy this client. Any system resources associated with the client
+     * will be cleaned up.
+     * <p/>
+     * This method must be called when there are not responses pending otherwise
+     * undefined behavior will occur.
+     * <p/>
+     * The client must not be reused after this method is called otherwise
+     * undefined behavior will occur.
+     */
+    public static void destroy(Client client) {
+        PollingDaemon pollingDaemon = (PollingDaemon) client.getProperties().get(PollingDaemon.PROPERTY_KEY);
+        if (pollingDaemon != null) {
+            l4j.debug("terminating polling daemon");
+            pollingDaemon.terminate();
+            if (pollingDaemon.getSmartConfig().getHostListProvider() != null) {
+                l4j.debug("destroying host list provider");
+                pollingDaemon.getSmartConfig().getHostListProvider().destroy();
+            }
+        }
+        l4j.debug("destroying Jersey client");
+        client.destroy();
     }
 
     static ApacheHttpClient4Handler createApacheClientHandler(SmartConfig smartConfig) {

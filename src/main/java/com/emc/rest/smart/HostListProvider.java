@@ -37,4 +37,13 @@ public interface HostListProvider {
      * (<code>host.setHealthy(false)</code> is called).
      */
     void runHealthCheck(Host host);
+
+    /**
+     * Destroy this provider. Any system resources associated with the provider
+     * will be cleaned up.
+     * <p/>
+     * The provider must not be reused after this method is called otherwise
+     * undefined behavior will occur.
+     */
+    void destroy();
 }
