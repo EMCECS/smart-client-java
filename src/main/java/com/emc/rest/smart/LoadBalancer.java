@@ -42,18 +42,15 @@ public class LoadBalancer {
      * Returns the host with the lowest response index.
      */
     public Host getTopHost(Map<String, Object> requestProperties) {
-        Host topHost = null;
+        Host topHost = null, topHealthyHost = null;
 
-        long lowestIndex = Long.MAX_VALUE;
+        long lowestIndex = Long.MAX_VALUE, lowestHealthyIndex = Long.MAX_VALUE;
 
         synchronized (hosts) {
             for (Host host : hosts) {
 
                 // apply any veto rules
                 if (shouldVeto(host, requestProperties)) continue;
-
-                // if the host is unhealthy/down, ignore it
-                if (!host.isHealthy()) continue;
 
                 // get response index for a host
                 long hostIndex = host.getResponseIndex();
@@ -63,7 +60,16 @@ public class LoadBalancer {
                     topHost = host;
                     lowestIndex = hostIndex;
                 }
+
+                // also keep track of the top *healthy* host
+                if (host.isHealthy() && hostIndex < lowestHealthyIndex) {
+                    topHealthyHost = host;
+                    lowestHealthyIndex = hostIndex;
+                }
             }
+
+            // if there are no healthy hosts, we still need a host to contact
+            if (topHealthyHost != null) topHost = topHealthyHost;
 
             // move the top host to the end of the host list as an extra tie-breaker
             hosts.remove(topHost);

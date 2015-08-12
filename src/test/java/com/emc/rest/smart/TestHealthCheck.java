@@ -141,6 +141,10 @@ public class TestHealthCheck {
         }
 
         @Override
+        public void destroy() {
+        }
+
+        @Override
         public List<Host> getHostList() {
             throw new RuntimeException("no host update");
         }

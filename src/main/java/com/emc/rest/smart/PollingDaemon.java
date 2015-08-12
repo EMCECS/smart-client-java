@@ -99,4 +99,12 @@ public class PollingDaemon extends Thread {
     public void terminate() {
         running = false;
     }
+
+    public SmartConfig getSmartConfig() {
+        return smartConfig;
+    }
+
+    public boolean isRunning() {
+        return running;
+    }
 }

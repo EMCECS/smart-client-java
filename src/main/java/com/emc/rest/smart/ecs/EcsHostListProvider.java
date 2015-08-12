@@ -102,6 +102,11 @@ public class EcsHostListProvider implements HostListProvider {
         client.resource(getRequestUri(host, "/?ping")).header("x-emc-namespace", "x").get(String.class);
     }
 
+    @Override
+    public void destroy() {
+        client.destroy();
+    }
+
     protected List<Host> getDataNodes(Host host) {
         String path = "/?endpoint";
         URI uri = getRequestUri(host, path);
