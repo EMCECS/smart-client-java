@@ -36,11 +36,15 @@ import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import com.sun.jersey.core.impl.provider.entity.ByteArrayProvider;
 import com.sun.jersey.core.impl.provider.entity.FileProvider;
 import com.sun.jersey.core.impl.provider.entity.InputStreamProvider;
+import org.apache.http.impl.client.AbstractHttpClient;
+import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.apache.http.impl.conn.PoolingClientConnectionManager;
 import org.apache.log4j.Logger;
 
 public final class SmartClientFactory {
     private static final Logger l4j = Logger.getLogger(SmartClientFactory.class);
+
+    public static final String DISABLE_APACHE_RETRY = "com.emc.rest.smart.disableApacheRetry";
 
     public static Client createSmartClient(SmartConfig smartConfig) {
         return createSmartClient(smartConfig, createApacheClientHandler(smartConfig));
@@ -144,7 +148,13 @@ public final class SmartClientFactory {
         if (smartConfig.getProxyPass() != null)
             clientConfig.getProperties().put(ApacheHttpClient4Config.PROPERTY_PROXY_PASSWORD, smartConfig.getProxyPass());
 
-        return ApacheHttpClient4.create(clientConfig).getClientHandler();
+        ApacheHttpClient4Handler handler = ApacheHttpClient4.create(clientConfig).getClientHandler();
+
+        // disable the retry handler if necessary
+        if (smartConfig.getProperty(DISABLE_APACHE_RETRY) != null)
+            ((AbstractHttpClient) handler.getHttpClient()).setHttpRequestRetryHandler(new DefaultHttpRequestRetryHandler(0, false));
+
+        return handler;
     }
 
     private SmartClientFactory() {
