@@ -146,7 +146,7 @@ public class SmartConfig {
     /**
      * Allows custom Jersey client properties to be set. These will be passed on in the Jersey ClientConfig
      */
-    public void withProperty(String propName, Object value) {
+    public void setProperty(String propName, Object value) {
         properties.put(propName, value);
     }
 
@@ -182,6 +182,11 @@ public class SmartConfig {
 
     public SmartConfig withHealthCheckEnabled(boolean healthCheckEnabled) {
         setHealthCheckEnabled(healthCheckEnabled);
+        return this;
+    }
+
+    public SmartConfig withProperty(String propName, Object value) {
+        setProperty(propName, value);
         return this;
     }
 }
