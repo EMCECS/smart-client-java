@@ -75,7 +75,12 @@ public class SmartFilter extends ClientFilter {
             ClientResponse response = getNext().handle(request);
 
             // capture request stats
-            host.callComplete(false);
+            if (response.getStatus() >= 500 && response.getStatus() != 501) {
+                // except for 501 (not implemented), all 50x responses are considered server errors
+                host.callComplete(true);
+            } else {
+                host.callComplete(false);
+            }
 
             // wrap the input stream so we can capture the actual connection close
             response.setEntityInputStream(new WrappedInputStream(response.getEntityInputStream(), host));
