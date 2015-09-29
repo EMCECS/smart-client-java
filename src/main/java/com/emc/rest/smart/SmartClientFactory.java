@@ -102,6 +102,9 @@ public final class SmartClientFactory {
         clientConfig.getClasses().add(FileProvider.class);
         clientConfig.getClasses().add(InputStreamProvider.class);
 
+        // add support for XML with no content-type
+        clientConfig.getClasses().add(OctetStreamXmlProvider.class);
+
         // build Jersey client
         return new Client(clientHandler, clientConfig);
     }

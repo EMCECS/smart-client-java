@@ -89,6 +89,18 @@ public class Vdc implements Iterable<VdcHost> {
         return getName().hashCode();
     }
 
+    @Override
+    public String toString() {
+        String hostsString = "";
+        if (hosts != null) {
+            for (Host host : hosts) {
+                if (hostsString.length() > 0) hostsString += ",";
+                hostsString += host.getName();
+            }
+        }
+        return name + '(' + hostsString + ')';
+    }
+
     public String getName() {
         return name;
     }
