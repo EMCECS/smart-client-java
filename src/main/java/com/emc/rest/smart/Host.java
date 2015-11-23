@@ -37,7 +37,7 @@ import java.util.Date;
  * - lower response index means the host is more likely to be used
  * - should be based primarily on number of open connections to the host
  * - an error will mark the host as unhealthy for <code>errorWaitTime</code> milliseconds
- * - multiple consecutive errors compound the unhealthy (cool down) period
+ * - multiple consecutive errors compound the unhealthy (cool down) period up to 8x the errorWaitTime
  */
 public class Host implements HostStats {
     private static final Logger l4j = Logger.getLogger(Host.class);
@@ -98,8 +98,9 @@ public class Host implements HostStats {
         if (!healthy) return false;
         else if (consecutiveErrors == 0) return true;
         else {
+            long coolDownPower = consecutiveErrors > 3 ? 3 : consecutiveErrors - 1;
             long msSinceLastUse = System.currentTimeMillis() - lastConnectionTime;
-            long errorCoolDown = (long) Math.pow(2, consecutiveErrors - 1) * errorWaitTime;
+            long errorCoolDown = (long) Math.pow(2, coolDownPower) * errorWaitTime;
             return msSinceLastUse > errorCoolDown;
         }
     }
