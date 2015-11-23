@@ -44,6 +44,7 @@ public class Host implements HostStats {
 
     public static final int DEFAULT_ERROR_WAIT_MS = 1500;
     public static final int LOG_DELAY = 60000; // 1 minute
+    public static final int MAX_COOL_DOWN_EXP = 4;
 
     private String name;
     private boolean healthy = true;
@@ -74,8 +75,11 @@ public class Host implements HostStats {
 
         // Just in case our stats get out of whack somehow, make sure people know about it
         if (openConnections < 0) {
-            if (System.currentTimeMillis() - lastLogTime > LOG_DELAY)
+            long currentTime = System.currentTimeMillis();
+            if (currentTime - lastLogTime > LOG_DELAY) {
                 LogMF.warn(l4j, "openConnections for host %s is %d !", this, openConnections);
+                lastLogTime = currentTime;
+            }
         }
     }
 
@@ -98,9 +102,9 @@ public class Host implements HostStats {
         if (!healthy) return false;
         else if (consecutiveErrors == 0) return true;
         else {
-            long coolDownPower = consecutiveErrors > 3 ? 3 : consecutiveErrors - 1;
+            long coolDownExp = consecutiveErrors > MAX_COOL_DOWN_EXP ? MAX_COOL_DOWN_EXP : consecutiveErrors - 1;
             long msSinceLastUse = System.currentTimeMillis() - lastConnectionTime;
-            long errorCoolDown = (long) Math.pow(2, coolDownPower) * errorWaitTime;
+            long errorCoolDown = (long) Math.pow(2, coolDownExp) * errorWaitTime;
             return msSinceLastUse > errorCoolDown;
         }
     }
