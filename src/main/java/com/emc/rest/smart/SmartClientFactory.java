@@ -36,9 +36,6 @@ import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import com.sun.jersey.core.impl.provider.entity.ByteArrayProvider;
 import com.sun.jersey.core.impl.provider.entity.FileProvider;
 import com.sun.jersey.core.impl.provider.entity.InputStreamProvider;
-import org.apache.http.impl.client.AbstractHttpClient;
-import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
-import org.apache.http.impl.conn.PoolingClientConnectionManager;
 import org.apache.log4j.Logger;
 
 public final class SmartClientFactory {
@@ -137,7 +134,7 @@ public final class SmartClientFactory {
         ClientConfig clientConfig = new DefaultClientConfig();
 
         // set up multi-threaded connection pool
-        PoolingClientConnectionManager connectionManager = new PoolingClientConnectionManager();
+        org.apache.http.impl.conn.PoolingClientConnectionManager connectionManager = new org.apache.http.impl.conn.PoolingClientConnectionManager();
         // 200 maximum active connections (should be more than enough for any JVM instance)
         connectionManager.setDefaultMaxPerRoute(200);
         connectionManager.setMaxTotal(200);
@@ -151,11 +148,18 @@ public final class SmartClientFactory {
         if (smartConfig.getProxyPass() != null)
             clientConfig.getProperties().put(ApacheHttpClient4Config.PROPERTY_PROXY_PASSWORD, smartConfig.getProxyPass());
 
+        // pass in jersey parameters from calling code (allows customization of client)
+        for (String propName : smartConfig.getProperties().keySet()) {
+            clientConfig.getProperties().put(propName, smartConfig.getProperty(propName));
+        }
+
         ApacheHttpClient4Handler handler = ApacheHttpClient4.create(clientConfig).getClientHandler();
 
         // disable the retry handler if necessary
-        if (smartConfig.getProperty(DISABLE_APACHE_RETRY) != null)
-            ((AbstractHttpClient) handler.getHttpClient()).setHttpRequestRetryHandler(new DefaultHttpRequestRetryHandler(0, false));
+        if (smartConfig.getProperty(DISABLE_APACHE_RETRY) != null) {
+            org.apache.http.impl.client.AbstractHttpClient httpClient = (org.apache.http.impl.client.AbstractHttpClient) handler.getHttpClient();
+            httpClient.setHttpRequestRetryHandler(new org.apache.http.impl.client.DefaultHttpRequestRetryHandler(0, false));
+        }
 
         return handler;
     }

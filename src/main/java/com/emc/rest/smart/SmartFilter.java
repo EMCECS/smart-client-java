@@ -30,8 +30,6 @@ import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientRequest;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.filter.ClientFilter;
-import org.apache.http.HttpHost;
-import org.apache.http.client.utils.URIUtils;
 
 import java.io.FilterInputStream;
 import java.io.IOException;
@@ -62,7 +60,8 @@ public class SmartFilter extends ClientFilter {
         // replace the host in the request
         URI uri = request.getURI();
         try {
-            uri = URIUtils.rewriteURI(uri, new HttpHost(host.getName(), uri.getPort(), uri.getScheme()));
+            org.apache.http.HttpHost httpHost = new org.apache.http.HttpHost(host.getName(), uri.getPort(), uri.getScheme());
+            uri = org.apache.http.client.utils.URIUtils.rewriteURI(uri, httpHost);
         } catch (URISyntaxException e) {
             throw new RuntimeException("load-balanced host generated invalid URI", e);
         }

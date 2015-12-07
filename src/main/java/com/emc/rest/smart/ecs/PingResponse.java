@@ -26,55 +26,39 @@
  */
 package com.emc.rest.smart.ecs;
 
-import com.emc.rest.smart.Host;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlTransient;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-public class VdcHost extends Host {
-    private Vdc vdc;
-    private boolean maintenanceMode;
+@XmlRootElement(name = "PingList")
+public class PingResponse {
+    Map<String, PingItem> pingItemMap;
 
-    public VdcHost(Vdc vdc, String name) {
-        super(name);
-        this.vdc = vdc;
+    @XmlElement(name = "PingItem")
+    public List<PingItem> getPingItems() {
+        if (pingItemMap == null) return null;
+        return new ArrayList<PingItem>(pingItemMap.values());
     }
 
-    @Override
-    public boolean isHealthy() {
-        return !isMaintenanceMode() && super.isHealthy();
+    public void setPingItems(List<PingItem> pingItems) {
+        if (pingItems != null) {
+            pingItemMap = new HashMap<String, PingItem>();
+            for (PingItem item : pingItems) {
+                pingItemMap.put(item.getName(), item);
+            }
+        }
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof VdcHost)) return false;
-        if (!super.equals(o)) return false;
-
-        VdcHost vdcHost = (VdcHost) o;
-
-        return getVdc().equals(vdcHost.getVdc());
-
+    @XmlTransient
+    public Map<String, PingItem> getPingItemMap() {
+        return pingItemMap;
     }
 
-    @Override
-    public int hashCode() {
-        int result = super.hashCode();
-        result = 31 * result + getVdc().hashCode();
-        return result;
-    }
-
-    @Override
-    public String toString() {
-        return vdc.getName() + ":" + super.toString();
-    }
-
-    public Vdc getVdc() {
-        return vdc;
-    }
-
-    public boolean isMaintenanceMode() {
-        return maintenanceMode;
-    }
-
-    public void setMaintenanceMode(boolean maintenanceMode) {
-        this.maintenanceMode = maintenanceMode;
+    public void setPingItemMap(Map<String, PingItem> pingItemMap) {
+        this.pingItemMap = pingItemMap;
     }
 }

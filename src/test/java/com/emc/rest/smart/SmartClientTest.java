@@ -28,9 +28,14 @@ package com.emc.rest.smart;
 
 import com.emc.util.TestConfig;
 import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.HttpConnectionParams;
+import org.apache.http.params.HttpParams;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -42,9 +47,7 @@ import java.net.URI;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class SmartClientTest {
@@ -103,6 +106,36 @@ public class SmartClientTest {
         l4j.info(Arrays.toString(smartConfig.getLoadBalancer().getHostStats()));
 
         Assert.assertEquals("at least one task failed", 100, successCount.intValue());
+    }
+
+    @Test
+    public void testConnTimeout() throws Exception {
+        int CONNECTION_TIMEOUT_MILLIS = 10000; // 10 seconds
+
+        HttpParams httpParams = new BasicHttpParams();
+        HttpConnectionParams.setConnectionTimeout(httpParams, CONNECTION_TIMEOUT_MILLIS);
+
+        SmartConfig smartConfig = new SmartConfig("10.4.4.180");
+        smartConfig.setProperty(ApacheHttpClient4Config.PROPERTY_HTTP_PARAMS, httpParams);
+
+        final Client client = SmartClientFactory.createStandardClient(smartConfig);
+
+        Future future = Executors.newSingleThreadExecutor().submit(new Runnable() {
+            @Override
+            public void run() {
+                client.resource("http://10.4.4.180:9020/?ping").get(String.class);
+                Assert.fail("response was not expected; choose an IP that is not in use");
+            }
+        });
+
+        try {
+            future.get(CONNECTION_TIMEOUT_MILLIS + 1000, TimeUnit.MILLISECONDS); // give an extra second leeway
+        } catch (TimeoutException e) {
+            Assert.fail("connection did not timeout");
+        } catch (ExecutionException e) {
+            Assert.assertTrue(e.getCause() instanceof ClientHandlerException);
+            Assert.assertTrue(e.getMessage().contains("timed out"));
+        }
     }
 
     private void getServiceInfo(Client client, URI serverUri, String uid, String secretKey) {

@@ -121,4 +121,27 @@ public class HostTest {
         Assert.assertEquals(0, host.getResponseIndex());
         Assert.assertTrue(host.isHealthy());
     }
+
+    @Test
+    public void testErrorWaitLimit() throws Exception {
+        Host host = new Host("bar");
+        host.setErrorWaitTime(100); // don't want this test to take forever
+
+        Assert.assertTrue(host.isHealthy());
+
+        // 8 consecutive errors
+        long errors = 8;
+        for (int i = 0; i < errors; i++) {
+            host.connectionOpened();
+            host.callComplete(true);
+            host.connectionClosed();
+        }
+
+        Assert.assertEquals(errors, host.getConsecutiveErrors());
+        long maxCoolDownMs = host.getErrorWaitTime() * (long) Math.pow(2, Host.MAX_COOL_DOWN_EXP) + 10; // add a few ms
+
+        Thread.sleep(maxCoolDownMs);
+
+        Assert.assertTrue(host.isHealthy());
+    }
 }

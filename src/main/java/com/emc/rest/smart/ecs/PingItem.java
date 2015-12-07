@@ -26,55 +26,45 @@
  */
 package com.emc.rest.smart.ecs;
 
-import com.emc.rest.smart.Host;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlEnum;
 
-public class VdcHost extends Host {
-    private Vdc vdc;
-    private boolean maintenanceMode;
+public class PingItem {
+    public static final String MAINTENANCE_MODE = "MAINTENANCE_MODE";
 
-    public VdcHost(Vdc vdc, String name) {
-        super(name);
-        this.vdc = vdc;
+    String name;
+    Status status;
+    String text;
+
+    @XmlElement(name = "Name")
+    public String getName() {
+        return name;
     }
 
-    @Override
-    public boolean isHealthy() {
-        return !isMaintenanceMode() && super.isHealthy();
+    public void setName(String name) {
+        this.name = name;
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof VdcHost)) return false;
-        if (!super.equals(o)) return false;
-
-        VdcHost vdcHost = (VdcHost) o;
-
-        return getVdc().equals(vdcHost.getVdc());
-
+    @XmlElement(name = "Status")
+    public Status getStatus() {
+        return status;
     }
 
-    @Override
-    public int hashCode() {
-        int result = super.hashCode();
-        result = 31 * result + getVdc().hashCode();
-        return result;
+    public void setStatus(Status status) {
+        this.status = status;
     }
 
-    @Override
-    public String toString() {
-        return vdc.getName() + ":" + super.toString();
+    @XmlElement(name = "Text")
+    public String getText() {
+        return text;
     }
 
-    public Vdc getVdc() {
-        return vdc;
+    public void setText(String text) {
+        this.text = text;
     }
 
-    public boolean isMaintenanceMode() {
-        return maintenanceMode;
-    }
-
-    public void setMaintenanceMode(boolean maintenanceMode) {
-        this.maintenanceMode = maintenanceMode;
+    @XmlEnum
+    public static enum Status {
+        OFF, UNKNOWN, ON
     }
 }
