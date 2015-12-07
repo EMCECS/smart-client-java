@@ -95,12 +95,60 @@ public class EcsHostListProviderTest {
             hostListProvider.runHealthCheck(host);
         }
 
+        // test non-VDC host
+        Host host = new Host(serverURI.getHost());
+        hostListProvider.runHealthCheck(host);
+        Assert.assertTrue(host.isHealthy());
+
+        // test VDC host
+        Vdc vdc = new Vdc(serverURI.getHost());
+        VdcHost vdcHost = vdc.getHosts().get(0);
+        hostListProvider.runHealthCheck(vdcHost);
+        Assert.assertTrue(vdcHost.isHealthy());
+        Assert.assertFalse(vdcHost.isMaintenanceMode());
+
         try {
             hostListProvider.runHealthCheck(new Host("localhost"));
             Assert.fail("health check against bad host should fail");
         } catch (Exception e) {
             // expected
         }
+    }
+
+    @Test
+    public void testMaintenanceMode() {
+        Vdc vdc = new Vdc("foo.com");
+        VdcHost host = vdc.getHosts().get(0);
+
+        // assert the host is healthy first
+        Assert.assertTrue(host.isHealthy());
+
+        // maintenance mode should make the host appear offline
+        host.setMaintenanceMode(true);
+        Assert.assertFalse(host.isHealthy());
+
+        host.setMaintenanceMode(false);
+        Assert.assertTrue(host.isHealthy());
+    }
+
+    @Test
+    public void testPing() throws Exception {
+        Properties properties = TestConfig.getProperties();
+
+        URI serverURI = new URI(TestConfig.getPropertyNotEmpty(properties, S3_ENDPOINT));
+        String proxyUri = properties.getProperty(PROXY_URI);
+
+        ClientConfig clientConfig = new DefaultClientConfig();
+        if (proxyUri != null) clientConfig.getProperties().put(ApacheHttpClient4Config.PROPERTY_PROXY_URI, proxyUri);
+        Client client = ApacheHttpClient4.create(clientConfig);
+
+        String portStr = serverURI.getPort() > 0 ? ":" + serverURI.getPort() : "";
+
+        PingResponse response = client.resource(
+                String.format("%s://%s%s/?ping", serverURI.getScheme(), serverURI.getHost(), portStr))
+                .header("x-emc-namespace", "foo").get(PingResponse.class);
+        Assert.assertNotNull(response);
+        Assert.assertEquals(PingItem.Status.OFF, response.getPingItemMap().get(PingItem.MAINTENANCE_MODE).getStatus());
     }
 
     @Test

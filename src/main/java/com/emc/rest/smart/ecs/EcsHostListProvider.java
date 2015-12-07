@@ -99,7 +99,18 @@ public class EcsHostListProvider implements HostListProvider {
     @Override
     public void runHealthCheck(Host host) {
         // header is workaround for STORAGE-1833
-        client.resource(getRequestUri(host, "/?ping")).header("x-emc-namespace", "x").get(String.class);
+        PingResponse response = client.resource(getRequestUri(host, "/?ping")).header("x-emc-namespace", "x")
+                .get(PingResponse.class);
+
+        if (host instanceof VdcHost) {
+            PingItem.Status status = PingItem.Status.OFF;
+            if (response != null && response.getPingItemMap() != null) {
+                PingItem pingItem = response.getPingItemMap().get(PingItem.MAINTENANCE_MODE);
+                if (pingItem != null) status = pingItem.getStatus();
+            }
+            if (status == PingItem.Status.ON) ((VdcHost) host).setMaintenanceMode(true);
+            else ((VdcHost) host).setMaintenanceMode(false);
+        }
     }
 
     @Override

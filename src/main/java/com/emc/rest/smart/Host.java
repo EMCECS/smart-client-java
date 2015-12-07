@@ -34,10 +34,12 @@ import java.util.Date;
 /**
  * Some basic statements about response index calculation:
  * <p>
- * - lower response index means the host is more likely to be used
- * - should be based primarily on number of open connections to the host
- * - an error will mark the host as unhealthy for <code>errorWaitTime</code> milliseconds
- * - multiple consecutive errors compound the unhealthy (cool down) period up to 8x the errorWaitTime
+ *     <ul>
+ *         <li>lower response index means the host is more likely to be used</li>
+ *         <li>should be based primarily on number of open connections to the host</li>
+ *         <li>an error will mark the host as unhealthy for <code>errorWaitTime</code> milliseconds</li>
+ *         <li>multiple consecutive errors compound the unhealthy (cool down) period up to 16x the errorWaitTime</li>
+ *     </ul>
  */
 public class Host implements HostStats {
     private static final Logger l4j = Logger.getLogger(Host.class);
