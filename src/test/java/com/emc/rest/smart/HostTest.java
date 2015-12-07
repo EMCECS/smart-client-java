@@ -138,7 +138,7 @@ public class HostTest {
         }
 
         Assert.assertEquals(errors, host.getConsecutiveErrors());
-        long maxCoolDownMs = host.getErrorWaitTime() * (long) Math.pow(2, Host.MAX_COOL_DOWN_EXP);
+        long maxCoolDownMs = host.getErrorWaitTime() * (long) Math.pow(2, Host.MAX_COOL_DOWN_EXP) + 10; // add a few ms
 
         Thread.sleep(maxCoolDownMs);
 
