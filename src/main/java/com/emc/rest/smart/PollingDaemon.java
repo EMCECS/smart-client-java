@@ -26,8 +26,8 @@
  */
 package com.emc.rest.smart;
 
-import org.apache.log4j.LogMF;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Polling thread that will terminate automatically when the application exits
@@ -35,7 +35,7 @@ import org.apache.log4j.Logger;
 public class PollingDaemon extends Thread {
     public static final String PROPERTY_KEY = "com.emc.rest.smart.pollingDaemon";
 
-    private static final Logger l4j = Logger.getLogger(PollingDaemon.class);
+    private static final Logger l4j = LoggerFactory.getLogger(PollingDaemon.class);
 
     private SmartConfig smartConfig;
     private boolean running = true;
@@ -75,7 +75,7 @@ public class PollingDaemon extends Thread {
                     try {
                         hostListProvider.runHealthCheck(host);
                         host.setHealthy(true);
-                        LogMF.debug(l4j, "health check successful for {0}; host is marked healthy", host.getName());
+                        l4j.debug("health check successful for {}; host is marked healthy", host.getName());
                     } catch (Throwable t) {
                         host.setHealthy(false);
                         l4j.warn("health check failed for " + host.getName() + "; host is marked unhealthy", t);
@@ -87,7 +87,7 @@ public class PollingDaemon extends Thread {
             try {
                 long sleepTime = smartConfig.getPollInterval() * 1000 - callTime;
                 if (sleepTime < 0) sleepTime = 0;
-                LogMF.debug(l4j, "polling daemon finished; will poll again in {0}ms..", sleepTime);
+                l4j.debug("polling daemon finished; will poll again in {}ms..", Long.toString(sleepTime));
                 if (sleepTime > 0) Thread.sleep(sleepTime);
             } catch (InterruptedException e) {
                 l4j.warn("interrupted while sleeping", e);

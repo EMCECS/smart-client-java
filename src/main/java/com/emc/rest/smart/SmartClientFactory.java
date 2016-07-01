@@ -26,6 +26,9 @@
  */
 package com.emc.rest.smart;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandler;
 import com.sun.jersey.api.client.config.ClientConfig;
@@ -36,10 +39,10 @@ import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import com.sun.jersey.core.impl.provider.entity.ByteArrayProvider;
 import com.sun.jersey.core.impl.provider.entity.FileProvider;
 import com.sun.jersey.core.impl.provider.entity.InputStreamProvider;
-import org.apache.log4j.Logger;
 
 public final class SmartClientFactory {
-    private static final Logger l4j = Logger.getLogger(SmartClientFactory.class);
+
+    private static final Logger l4j = LoggerFactory.getLogger(SmartClientFactory.class);
 
     public static final String DISABLE_APACHE_RETRY = "com.emc.rest.smart.disableApacheRetry";
 

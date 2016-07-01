@@ -26,14 +26,16 @@
  */
 package com.emc.rest.util;
 
-import org.apache.log4j.Logger;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public final class StreamUtil {
-    private static final Logger l4j = Logger.getLogger(StreamUtil.class);
+
+    private static final Logger l4j = LoggerFactory.getLogger(StreamUtil.class);
 
     /**
      * Closes streams no matter what.

@@ -32,8 +32,8 @@ import com.emc.rest.smart.LoadBalancer;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
 import org.apache.commons.codec.binary.Base64;
-import org.apache.log4j.LogMF;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -43,7 +43,8 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class EcsHostListProvider implements HostListProvider {
-    private static final Logger l4j = Logger.getLogger(EcsHostListProvider.class);
+
+    private static final Logger l4j = LoggerFactory.getLogger(EcsHostListProvider.class);
 
     public static final String DEFAULT_PROTOCOL = "https";
     public static final int DEFAULT_PORT = 9021;
@@ -145,7 +146,7 @@ public class EcsHostListProvider implements HostListProvider {
         request.header("Authorization", "AWS " + user + ":" + signature);
 
         // make REST call
-        LogMF.debug(l4j, "retrieving VDC node list from {0}", host.getName());
+        l4j.debug("retrieving VDC node list from {}", host.getName());
         List<String> dataNodes = request.get(ListDataNode.class).getDataNodes();
 
         List<Host> hosts = new ArrayList<Host>();
