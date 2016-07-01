@@ -95,7 +95,6 @@ public class PollingDaemon extends Thread {
         }
     }
 
-    @SuppressWarnings("unused")
     public void terminate() {
         running = false;
     }
