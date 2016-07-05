@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2016, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory;
  */
 public class Host implements HostStats {
 
-    private static final Logger l4j = LoggerFactory.getLogger(Host.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(Host.class);
 
     public static final int DEFAULT_ERROR_WAIT_MS = 1500;
     public static final int LOG_DELAY = 60000; // 1 minute
@@ -80,7 +80,7 @@ public class Host implements HostStats {
         if (openConnections < 0) {
             long currentTime = System.currentTimeMillis();
             if (currentTime - lastLogTime > LOG_DELAY) {
-                l4j.warn("openConnections for host {} is {} !", this.toString(), Integer.toString(openConnections));
+                LOGGER.warn("openConnections for host {} is {} !", this.toString(), Integer.toString(openConnections));
                 lastLogTime = currentTime;
             }
         }
@@ -90,7 +90,7 @@ public class Host implements HostStats {
         if (isError) {
             totalErrors++;
             consecutiveErrors++;
-            l4j.debug("error tallied for {}; total errors: {}, consecutive errors: {}",
+            LOGGER.debug("error tallied for {}; total errors: {}, consecutive errors: {}",
                     name, totalErrors, consecutiveErrors);
         } else {
             consecutiveErrors = 0;

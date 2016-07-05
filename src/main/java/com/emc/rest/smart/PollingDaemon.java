@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2016, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 public class PollingDaemon extends Thread {
     public static final String PROPERTY_KEY = "com.emc.rest.smart.pollingDaemon";
 
-    private static final Logger l4j = LoggerFactory.getLogger(PollingDaemon.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(PollingDaemon.class);
 
     private SmartConfig smartConfig;
     private boolean running = true;
@@ -49,36 +49,36 @@ public class PollingDaemon extends Thread {
     public void run() {
         while (running) {
             long start = System.currentTimeMillis();
-            l4j.debug("polling daemon running");
+            LOGGER.debug("polling daemon running");
 
             LoadBalancer loadBalancer = smartConfig.getLoadBalancer();
             HostListProvider hostListProvider = smartConfig.getHostListProvider();
 
             if (!smartConfig.isHostUpdateEnabled()) {
-                l4j.info("host update is disabled; not updating hosts");
+                LOGGER.info("host update is disabled; not updating hosts");
             } else if (hostListProvider == null) {
-                l4j.info("no host list provider; not updating hosts");
+                LOGGER.info("no host list provider; not updating hosts");
             } else {
                 try {
                     loadBalancer.updateHosts(hostListProvider.getHostList());
                 } catch (Throwable t) {
-                    l4j.warn("unable to enumerate servers", t);
+                    LOGGER.warn("unable to enumerate servers", t);
                 }
             }
 
             if (!smartConfig.isHealthCheckEnabled()) {
-                l4j.info("health check is disabled; not checking hosts");
+                LOGGER.info("health check is disabled; not checking hosts");
             } else if (hostListProvider == null) {
-                l4j.info("no host list provider; not checking hosts");
+                LOGGER.info("no host list provider; not checking hosts");
             } else {
                 for (Host host : loadBalancer.getAllHosts()) {
                     try {
                         hostListProvider.runHealthCheck(host);
                         host.setHealthy(true);
-                        l4j.debug("health check successful for {}; host is marked healthy", host.getName());
+                        LOGGER.debug("health check successful for {}; host is marked healthy", host.getName());
                     } catch (Throwable t) {
                         host.setHealthy(false);
-                        l4j.warn("health check failed for " + host.getName() + "; host is marked unhealthy", t);
+                        LOGGER.warn("health check failed for " + host.getName() + "; host is marked unhealthy", t);
                     }
                 }
             }
@@ -87,10 +87,10 @@ public class PollingDaemon extends Thread {
             try {
                 long sleepTime = smartConfig.getPollInterval() * 1000 - callTime;
                 if (sleepTime < 0) sleepTime = 0;
-                l4j.debug("polling daemon finished; will poll again in {}ms..", Long.toString(sleepTime));
+                LOGGER.debug("polling daemon finished; will poll again in {}ms..", Long.toString(sleepTime));
                 if (sleepTime > 0) Thread.sleep(sleepTime);
             } catch (InterruptedException e) {
-                l4j.warn("interrupted while sleeping", e);
+                LOGGER.warn("interrupted while sleeping", e);
             }
         }
     }

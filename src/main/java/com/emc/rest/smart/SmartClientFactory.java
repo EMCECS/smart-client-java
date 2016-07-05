@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2016, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -42,7 +42,7 @@ import com.sun.jersey.core.impl.provider.entity.InputStreamProvider;
 
 public final class SmartClientFactory {
 
-    private static final Logger l4j = LoggerFactory.getLogger(SmartClientFactory.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SmartClientFactory.class);
 
     public static final String DISABLE_APACHE_RETRY = "com.emc.rest.smart.disableApacheRetry";
 
@@ -122,14 +122,14 @@ public final class SmartClientFactory {
     public static void destroy(Client client) {
         PollingDaemon pollingDaemon = (PollingDaemon) client.getProperties().get(PollingDaemon.PROPERTY_KEY);
         if (pollingDaemon != null) {
-            l4j.debug("terminating polling daemon");
+            LOGGER.debug("terminating polling daemon");
             pollingDaemon.terminate();
             if (pollingDaemon.getSmartConfig().getHostListProvider() != null) {
-                l4j.debug("destroying host list provider");
+                LOGGER.debug("destroying host list provider");
                 pollingDaemon.getSmartConfig().getHostListProvider().destroy();
             }
         }
-        l4j.debug("destroying Jersey client");
+        LOGGER.debug("destroying Jersey client");
         client.destroy();
     }
 

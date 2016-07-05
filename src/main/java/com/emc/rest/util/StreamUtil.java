@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2016, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 
 public final class StreamUtil {
 
-    private static final Logger l4j = LoggerFactory.getLogger(StreamUtil.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(StreamUtil.class);
 
     /**
      * Closes streams no matter what.
@@ -50,7 +50,7 @@ public final class StreamUtil {
             try {
                 inputStream.close();
             } catch (Throwable t) {
-                l4j.warn("could not close stream", t);
+                LOGGER.warn("could not close stream", t);
             }
         }
     }
@@ -74,12 +74,12 @@ public final class StreamUtil {
             try {
                 is.close();
             } catch (Throwable t) {
-                l4j.warn("could not close stream", t);
+                LOGGER.warn("could not close stream", t);
             }
             try {
                 os.close();
             } catch (Throwable t) {
-                l4j.warn("could not close stream", t);
+                LOGGER.warn("could not close stream", t);
             }
         }
         return count;
