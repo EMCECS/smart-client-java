@@ -44,7 +44,7 @@ import java.util.*;
 
 public class EcsHostListProvider implements HostListProvider {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(EcsHostListProvider.class);
+    private static final Logger log = LoggerFactory.getLogger(EcsHostListProvider.class);
 
     public static final String DEFAULT_PROTOCOL = "https";
     public static final int DEFAULT_PORT = 9021;
@@ -73,12 +73,12 @@ public class EcsHostListProvider implements HostListProvider {
         List<Host> hostList = new ArrayList<Host>();
 
         for (Vdc vdc : vdcs) {
-            if (vdc.getHosts().isEmpty()) LOGGER.warn("VDC " + vdc.getName() + " has no hosts!");
+            if (vdc.getHosts().isEmpty()) log.warn("VDC " + vdc.getName() + " has no hosts!");
 
             boolean success = false;
             for (Host host : vdc) {
                 if (!host.isHealthy()) { // the load balancer manages health checks
-                    LOGGER.warn("not retrieving node list from " + host.getName() + " because it's unhealthy");
+                    log.warn("not retrieving node list from " + host.getName() + " because it's unhealthy");
                     continue;
                 }
                 try {
@@ -86,10 +86,10 @@ public class EcsHostListProvider implements HostListProvider {
                     success = true;
                     break;
                 } catch (Throwable t) {
-                    LOGGER.warn("unable to retrieve node list from " + host.getName(), t);
+                    log.warn("unable to retrieve node list from " + host.getName(), t);
                 }
             }
-            if (!success) LOGGER.warn("could not retrieve node list for VDC " + vdc.getName());
+            if (!success) log.warn("could not retrieve node list for VDC " + vdc.getName());
 
             hostList.addAll(vdc.getHosts());
         }
@@ -146,7 +146,7 @@ public class EcsHostListProvider implements HostListProvider {
         request.header("Authorization", "AWS " + user + ":" + signature);
 
         // make REST call
-        LOGGER.debug("retrieving VDC node list from {}", host.getName());
+        log.debug("retrieving VDC node list from {}", host.getName());
         List<String> dataNodes = request.get(ListDataNode.class).getDataNodes();
 
         List<Host> hosts = new ArrayList<Host>();
@@ -169,8 +169,8 @@ public class EcsHostListProvider implements HostListProvider {
         Mac mac = Mac.getInstance("HmacSHA1");
         mac.init(new SecretKeySpec(secret.getBytes("UTF-8"), "HmacSHA1"));
         String signature = new String(Base64.encodeBase64(mac.doFinal(canonicalString.getBytes("UTF-8"))));
-        LOGGER.debug("canonicalString:\n" + canonicalString);
-        LOGGER.debug("signature:\n" + signature);
+        log.debug("canonicalString:\n" + canonicalString);
+        log.debug("signature:\n" + signature);
         return signature;
     }
 
@@ -200,14 +200,14 @@ public class EcsHostListProvider implements HostListProvider {
 
             // host is not in the updated host list, so remove it from the VDC
             if (!hostPresent) {
-                LOGGER.info("host " + vdcHost.getName() + " was not in the updated node list; removing from VDC " + vdc.getName());
+                log.info("host " + vdcHost.getName() + " was not in the updated node list; removing from VDC " + vdc.getName());
                 vdcI.remove();
             }
         }
 
         // add any remaining new hosts we weren't previously aware of
         for (VdcHost node : vdcNodeList) {
-            LOGGER.info("adding host " + node.getName() + " to VDC " + vdc.getName());
+            log.info("adding host " + node.getName() + " to VDC " + vdc.getName());
             vdc.getHosts().add(new VdcHost(vdc, node.getName()));
         }
     }

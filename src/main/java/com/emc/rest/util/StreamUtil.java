@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 
 public final class StreamUtil {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(StreamUtil.class);
+    private static final Logger log = LoggerFactory.getLogger(StreamUtil.class);
 
     /**
      * Closes streams no matter what.
@@ -50,7 +50,7 @@ public final class StreamUtil {
             try {
                 inputStream.close();
             } catch (Throwable t) {
-                LOGGER.warn("could not close stream", t);
+                log.warn("could not close stream", t);
             }
         }
     }
@@ -74,12 +74,12 @@ public final class StreamUtil {
             try {
                 is.close();
             } catch (Throwable t) {
-                LOGGER.warn("could not close stream", t);
+                log.warn("could not close stream", t);
             }
             try {
                 os.close();
             } catch (Throwable t) {
-                LOGGER.warn("could not close stream", t);
+                log.warn("could not close stream", t);
             }
         }
         return count;

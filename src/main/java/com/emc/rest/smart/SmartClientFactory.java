@@ -42,7 +42,7 @@ import com.sun.jersey.core.impl.provider.entity.InputStreamProvider;
 
 public final class SmartClientFactory {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(SmartClientFactory.class);
+    private static final Logger log = LoggerFactory.getLogger(SmartClientFactory.class);
 
     public static final String DISABLE_APACHE_RETRY = "com.emc.rest.smart.disableApacheRetry";
 
@@ -122,14 +122,14 @@ public final class SmartClientFactory {
     public static void destroy(Client client) {
         PollingDaemon pollingDaemon = (PollingDaemon) client.getProperties().get(PollingDaemon.PROPERTY_KEY);
         if (pollingDaemon != null) {
-            LOGGER.debug("terminating polling daemon");
+            log.debug("terminating polling daemon");
             pollingDaemon.terminate();
             if (pollingDaemon.getSmartConfig().getHostListProvider() != null) {
-                LOGGER.debug("destroying host list provider");
+                log.debug("destroying host list provider");
                 pollingDaemon.getSmartConfig().getHostListProvider().destroy();
             }
         }
-        LOGGER.debug("destroying Jersey client");
+        log.debug("destroying Jersey client");
         client.destroy();
     }
 

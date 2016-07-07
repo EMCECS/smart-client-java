@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 public class PollingDaemon extends Thread {
     public static final String PROPERTY_KEY = "com.emc.rest.smart.pollingDaemon";
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(PollingDaemon.class);
+    private static final Logger log = LoggerFactory.getLogger(PollingDaemon.class);
 
     private SmartConfig smartConfig;
     private boolean running = true;
@@ -49,36 +49,36 @@ public class PollingDaemon extends Thread {
     public void run() {
         while (running) {
             long start = System.currentTimeMillis();
-            LOGGER.debug("polling daemon running");
+            log.debug("polling daemon running");
 
             LoadBalancer loadBalancer = smartConfig.getLoadBalancer();
             HostListProvider hostListProvider = smartConfig.getHostListProvider();
 
             if (!smartConfig.isHostUpdateEnabled()) {
-                LOGGER.info("host update is disabled; not updating hosts");
+                log.info("host update is disabled; not updating hosts");
             } else if (hostListProvider == null) {
-                LOGGER.info("no host list provider; not updating hosts");
+                log.info("no host list provider; not updating hosts");
             } else {
                 try {
                     loadBalancer.updateHosts(hostListProvider.getHostList());
                 } catch (Throwable t) {
-                    LOGGER.warn("unable to enumerate servers", t);
+                    log.warn("unable to enumerate servers", t);
                 }
             }
 
             if (!smartConfig.isHealthCheckEnabled()) {
-                LOGGER.info("health check is disabled; not checking hosts");
+                log.info("health check is disabled; not checking hosts");
             } else if (hostListProvider == null) {
-                LOGGER.info("no host list provider; not checking hosts");
+                log.info("no host list provider; not checking hosts");
             } else {
                 for (Host host : loadBalancer.getAllHosts()) {
                     try {
                         hostListProvider.runHealthCheck(host);
                         host.setHealthy(true);
-                        LOGGER.debug("health check successful for {}; host is marked healthy", host.getName());
+                        log.debug("health check successful for {}; host is marked healthy", host.getName());
                     } catch (Throwable t) {
                         host.setHealthy(false);
-                        LOGGER.warn("health check failed for " + host.getName() + "; host is marked unhealthy", t);
+                        log.warn("health check failed for " + host.getName() + "; host is marked unhealthy", t);
                     }
                 }
             }
@@ -87,10 +87,10 @@ public class PollingDaemon extends Thread {
             try {
                 long sleepTime = smartConfig.getPollInterval() * 1000 - callTime;
                 if (sleepTime < 0) sleepTime = 0;
-                LOGGER.debug("polling daemon finished; will poll again in {}ms..", Long.toString(sleepTime));
+                log.debug("polling daemon finished; will poll again in {}ms..", Long.toString(sleepTime));
                 if (sleepTime > 0) Thread.sleep(sleepTime);
             } catch (InterruptedException e) {
-                LOGGER.warn("interrupted while sleeping", e);
+                log.warn("interrupted while sleeping", e);
             }
         }
     }
