@@ -37,9 +37,16 @@ import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.Marshaller;
+import javax.xml.bind.Unmarshaller;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.TreeMap;
 
 public class EcsHostListProviderTest {
     public static final String S3_ENDPOINT = "s3.endpoint";
@@ -182,5 +189,46 @@ public class EcsHostListProviderTest {
         Assert.assertTrue("VDC1 server list is empty", vdc1.getHosts().size() > 0);
         Assert.assertTrue("VDC2 server list is empty", vdc2.getHosts().size() > 0);
         Assert.assertTrue("VDC3 server list is empty", vdc3.getHosts().size() > 0);
+    }
+
+    @Test
+    public void testPingMarshalling() throws Exception {
+        JAXBContext context = JAXBContext.newInstance(PingResponse.class);
+
+        String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+                "<PingList xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">" +
+                "<PingItem><Name>LOAD_FACTOR</Name><Value>1</Value></PingItem>" +
+                "<PingItem><Name>MAINTENANCE_MODE</Name><Status>OFF</Status><Text>Data Node is Available</Text></PingItem>" +
+                "</PingList>";
+
+        PingResponse object = new PingResponse();
+        Map<String, PingItem> map = new TreeMap<String, PingItem>();
+        map.put("LOAD_FACTOR", new PingItem("LOAD_FACTOR", null, null, "1"));
+        map.put("MAINTENANCE_MODE", new PingItem("MAINTENANCE_MODE", PingItem.Status.OFF, "Data Node is Available", null));
+        object.setPingItemMap(map);
+
+        // unmarshall and compare to object
+        Unmarshaller unmarshaller = context.createUnmarshaller();
+        PingResponse xObject = (PingResponse) unmarshaller.unmarshal(new StringReader(xml));
+
+        Assert.assertEquals(object.getPingItemMap().keySet(), xObject.getPingItemMap().keySet());
+        PingItem pingItem = object.getPingItems().get(0), xPingItem = xObject.getPingItems().get(0);
+        Assert.assertEquals(pingItem.getName(), xPingItem.getName());
+        Assert.assertEquals(pingItem.getStatus(), xPingItem.getStatus());
+        Assert.assertEquals(pingItem.getText(), xPingItem.getText());
+        Assert.assertEquals(pingItem.getValue(), xPingItem.getValue());
+        pingItem = object.getPingItems().get(1);
+        xPingItem = xObject.getPingItems().get(1);
+        Assert.assertEquals(pingItem.getName(), xPingItem.getName());
+        Assert.assertEquals(pingItem.getStatus(), xPingItem.getStatus());
+        Assert.assertEquals(pingItem.getText(), xPingItem.getText());
+        Assert.assertEquals(pingItem.getValue(), xPingItem.getValue());
+
+        // marshall and compare XML
+        Marshaller marshaller = context.createMarshaller();
+        StringWriter writer = new StringWriter();
+        marshaller.marshal(object, writer);
+
+        Assert.assertEquals(xml, writer.toString());
     }
 }
