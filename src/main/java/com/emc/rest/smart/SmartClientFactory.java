@@ -112,10 +112,10 @@ public final class SmartClientFactory {
     /**
      * Destroy this client. Any system resources associated with the client
      * will be cleaned up.
-     * <p/>
+     * <p>
      * This method must be called when there are not responses pending otherwise
      * undefined behavior will occur.
-     * <p/>
+     * <p>
      * The client must not be reused after this method is called otherwise
      * undefined behavior will occur.
      */

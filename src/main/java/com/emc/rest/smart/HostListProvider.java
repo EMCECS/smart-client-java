@@ -41,7 +41,7 @@ public interface HostListProvider {
     /**
      * Destroy this provider. Any system resources associated with the provider
      * will be cleaned up.
-     * <p/>
+     * <p>
      * The provider must not be reused after this method is called otherwise
      * undefined behavior will occur.
      */
