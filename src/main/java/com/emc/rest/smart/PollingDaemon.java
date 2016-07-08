@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2016, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -26,8 +26,8 @@
  */
 package com.emc.rest.smart;
 
-import org.apache.log4j.LogMF;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Polling thread that will terminate automatically when the application exits
@@ -35,7 +35,7 @@ import org.apache.log4j.Logger;
 public class PollingDaemon extends Thread {
     public static final String PROPERTY_KEY = "com.emc.rest.smart.pollingDaemon";
 
-    private static final Logger l4j = Logger.getLogger(PollingDaemon.class);
+    private static final Logger log = LoggerFactory.getLogger(PollingDaemon.class);
 
     private SmartConfig smartConfig;
     private boolean running = true;
@@ -49,36 +49,36 @@ public class PollingDaemon extends Thread {
     public void run() {
         while (running) {
             long start = System.currentTimeMillis();
-            l4j.debug("polling daemon running");
+            log.debug("polling daemon running");
 
             LoadBalancer loadBalancer = smartConfig.getLoadBalancer();
             HostListProvider hostListProvider = smartConfig.getHostListProvider();
 
             if (!smartConfig.isHostUpdateEnabled()) {
-                l4j.info("host update is disabled; not updating hosts");
+                log.info("host update is disabled; not updating hosts");
             } else if (hostListProvider == null) {
-                l4j.info("no host list provider; not updating hosts");
+                log.info("no host list provider; not updating hosts");
             } else {
                 try {
                     loadBalancer.updateHosts(hostListProvider.getHostList());
                 } catch (Throwable t) {
-                    l4j.warn("unable to enumerate servers", t);
+                    log.warn("unable to enumerate servers", t);
                 }
             }
 
             if (!smartConfig.isHealthCheckEnabled()) {
-                l4j.info("health check is disabled; not checking hosts");
+                log.info("health check is disabled; not checking hosts");
             } else if (hostListProvider == null) {
-                l4j.info("no host list provider; not checking hosts");
+                log.info("no host list provider; not checking hosts");
             } else {
                 for (Host host : loadBalancer.getAllHosts()) {
                     try {
                         hostListProvider.runHealthCheck(host);
                         host.setHealthy(true);
-                        LogMF.debug(l4j, "health check successful for {0}; host is marked healthy", host.getName());
+                        log.debug("health check successful for {}; host is marked healthy", host.getName());
                     } catch (Throwable t) {
                         host.setHealthy(false);
-                        l4j.warn("health check failed for " + host.getName() + "; host is marked unhealthy", t);
+                        log.warn("health check failed for " + host.getName() + "; host is marked unhealthy", t);
                     }
                 }
             }
@@ -87,15 +87,14 @@ public class PollingDaemon extends Thread {
             try {
                 long sleepTime = smartConfig.getPollInterval() * 1000 - callTime;
                 if (sleepTime < 0) sleepTime = 0;
-                LogMF.debug(l4j, "polling daemon finished; will poll again in {0}ms..", sleepTime);
+                log.debug("polling daemon finished; will poll again in {}ms..", Long.toString(sleepTime));
                 if (sleepTime > 0) Thread.sleep(sleepTime);
             } catch (InterruptedException e) {
-                l4j.warn("interrupted while sleeping", e);
+                log.warn("interrupted while sleeping", e);
             }
         }
     }
 
-    @SuppressWarnings("unused")
     public void terminate() {
         running = false;
     }

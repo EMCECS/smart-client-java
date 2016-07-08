@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2016, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -26,10 +26,10 @@
  */
 package com.emc.rest.smart;
 
-import org.apache.log4j.LogMF;
-import org.apache.log4j.Logger;
-
 import java.util.Date;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Some basic statements about response index calculation:
@@ -42,7 +42,8 @@ import java.util.Date;
  *     </ul>
  */
 public class Host implements HostStats {
-    private static final Logger l4j = Logger.getLogger(Host.class);
+
+    private static final Logger log = LoggerFactory.getLogger(Host.class);
 
     public static final int DEFAULT_ERROR_WAIT_MS = 1500;
     public static final int LOG_DELAY = 60000; // 1 minute
@@ -79,7 +80,7 @@ public class Host implements HostStats {
         if (openConnections < 0) {
             long currentTime = System.currentTimeMillis();
             if (currentTime - lastLogTime > LOG_DELAY) {
-                LogMF.warn(l4j, "openConnections for host %s is %d !", this, openConnections);
+                log.warn("openConnections for host {} is {} !", this.toString(), Integer.toString(openConnections));
                 lastLogTime = currentTime;
             }
         }
@@ -89,8 +90,8 @@ public class Host implements HostStats {
         if (isError) {
             totalErrors++;
             consecutiveErrors++;
-            LogMF.debug(l4j, "error tallied for {2}; total errors: {0}, consecutive errors: {1}",
-                    totalErrors, consecutiveErrors, name);
+            log.debug("error tallied for {}; total errors: {}, consecutive errors: {}",
+                    name, totalErrors, consecutiveErrors);
         } else {
             consecutiveErrors = 0;
         }

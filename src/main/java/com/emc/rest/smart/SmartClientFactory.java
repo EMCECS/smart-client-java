@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, EMC Corporation.
+ * Copyright (c) 2015-2016, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -26,6 +26,9 @@
  */
 package com.emc.rest.smart;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandler;
 import com.sun.jersey.api.client.config.ClientConfig;
@@ -36,10 +39,10 @@ import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import com.sun.jersey.core.impl.provider.entity.ByteArrayProvider;
 import com.sun.jersey.core.impl.provider.entity.FileProvider;
 import com.sun.jersey.core.impl.provider.entity.InputStreamProvider;
-import org.apache.log4j.Logger;
 
 public final class SmartClientFactory {
-    private static final Logger l4j = Logger.getLogger(SmartClientFactory.class);
+
+    private static final Logger log = LoggerFactory.getLogger(SmartClientFactory.class);
 
     public static final String DISABLE_APACHE_RETRY = "com.emc.rest.smart.disableApacheRetry";
 
@@ -109,24 +112,24 @@ public final class SmartClientFactory {
     /**
      * Destroy this client. Any system resources associated with the client
      * will be cleaned up.
-     * <p/>
+     * <p>
      * This method must be called when there are not responses pending otherwise
      * undefined behavior will occur.
-     * <p/>
+     * <p>
      * The client must not be reused after this method is called otherwise
      * undefined behavior will occur.
      */
     public static void destroy(Client client) {
         PollingDaemon pollingDaemon = (PollingDaemon) client.getProperties().get(PollingDaemon.PROPERTY_KEY);
         if (pollingDaemon != null) {
-            l4j.debug("terminating polling daemon");
+            log.debug("terminating polling daemon");
             pollingDaemon.terminate();
             if (pollingDaemon.getSmartConfig().getHostListProvider() != null) {
-                l4j.debug("destroying host list provider");
+                log.debug("destroying host list provider");
                 pollingDaemon.getSmartConfig().getHostListProvider().destroy();
             }
         }
-        l4j.debug("destroying Jersey client");
+        log.debug("destroying Jersey client");
         client.destroy();
     }
 

@@ -35,6 +35,17 @@ public class PingItem {
     String name;
     Status status;
     String text;
+    String value;
+
+    public PingItem() {
+    }
+
+    public PingItem(String name, Status status, String text, String value) {
+        this.name = name;
+        this.status = status;
+        this.text = text;
+        this.value = value;
+    }
 
     @XmlElement(name = "Name")
     public String getName() {
@@ -63,8 +74,17 @@ public class PingItem {
         this.text = text;
     }
 
+    @XmlElement(name = "Value")
+    public String getValue() {
+        return value;
+    }
+
+    public void setValue(String value) {
+        this.value = value;
+    }
+
     @XmlEnum
-    public static enum Status {
+    public enum Status {
         OFF, UNKNOWN, ON
     }
 }
