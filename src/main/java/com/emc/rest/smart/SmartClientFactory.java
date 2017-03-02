@@ -138,9 +138,9 @@ public final class SmartClientFactory {
 
         // set up multi-threaded connection pool
         org.apache.http.impl.conn.PoolingClientConnectionManager connectionManager = new org.apache.http.impl.conn.PoolingClientConnectionManager();
-        // 200 maximum active connections (should be more than enough for any JVM instance)
-        connectionManager.setDefaultMaxPerRoute(200);
-        connectionManager.setMaxTotal(200);
+        // 999 maximum active connections (max allowed)
+        connectionManager.setDefaultMaxPerRoute(999);
+        connectionManager.setMaxTotal(999);
         clientConfig.getProperties().put(ApacheHttpClient4Config.PROPERTY_CONNECTION_MANAGER, connectionManager);
 
         // set proxy config
