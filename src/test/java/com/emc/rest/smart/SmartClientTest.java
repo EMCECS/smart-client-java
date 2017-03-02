@@ -55,7 +55,7 @@ public class SmartClientTest {
 
     public static final String PROP_ATMOS_ENDPOINTS = "atmos.endpoints";
     public static final String PROP_ATMOS_UID = "atmos.uid";
-    public static final String PROP_ATMOS_SECRET = "atmos.secret_key";
+    public static final String PROP_ATMOS_SECRET = "atmos.secret";
 
     private static final String HEADER_FORMAT = "EEE, d MMM yyyy HH:mm:ss z";
     private static final ThreadLocal<DateFormat> headerFormat = new ThreadLocal<DateFormat>();
