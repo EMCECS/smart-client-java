@@ -71,7 +71,7 @@ public class HostTest {
         Thread.sleep(errorWaitTime - 500); // wait until just before the error is cooled down
         Assert.assertFalse(host.isHealthy()); // host should still be in cool down period
 
-        Thread.sleep(500); // wait until cool down period is over
+        Thread.sleep(600); // wait until cool down period is over
         Assert.assertTrue(host.isHealthy());
 
         // test another error
@@ -89,7 +89,7 @@ public class HostTest {
         Thread.sleep(2 * errorWaitTime - 500); // wait until just before cool down is over
         Assert.assertFalse(host.isHealthy());
 
-        Thread.sleep(500); // wait until cool down period is over
+        Thread.sleep(600); // wait until cool down period is over
         Assert.assertTrue(host.isHealthy());
 
         // test one more error
@@ -107,7 +107,7 @@ public class HostTest {
         Thread.sleep(2 * 2 * errorWaitTime - 500); // wait until just before cool down is over
         Assert.assertFalse(host.isHealthy());
 
-        Thread.sleep(500); // wait until cool down period is over
+        Thread.sleep(600); // wait until cool down period is over
         Assert.assertTrue(host.isHealthy());
 
         // test no more errors

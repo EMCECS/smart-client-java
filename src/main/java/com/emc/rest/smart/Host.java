@@ -26,10 +26,10 @@
  */
 package com.emc.rest.smart;
 
-import java.util.Date;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Date;
 
 /**
  * Some basic statements about response index calculation:
@@ -105,7 +105,9 @@ public class Host implements HostStats {
         if (!healthy) return false;
         else if (consecutiveErrors == 0) return true;
         else {
-            long coolDownExp = consecutiveErrors > MAX_COOL_DOWN_EXP ? MAX_COOL_DOWN_EXP : consecutiveErrors - 1;
+            // errorWaitTime * 2 ^ (min(errors-1, 4))
+            // i.e. back-off is doubled for each consecutive error up to 4
+            long coolDownExp = Math.min(consecutiveErrors - 1, MAX_COOL_DOWN_EXP);
             long msSinceLastUse = System.currentTimeMillis() - lastConnectionTime;
             long errorCoolDown = (long) Math.pow(2, coolDownExp) * errorWaitTime;
             return msSinceLastUse > errorCoolDown;
