@@ -115,7 +115,7 @@ public class SmartClientTest {
         HttpParams httpParams = new BasicHttpParams();
         HttpConnectionParams.setConnectionTimeout(httpParams, CONNECTION_TIMEOUT_MILLIS);
 
-        SmartConfig smartConfig = new SmartConfig("10.4.4.180");
+        SmartConfig smartConfig = new SmartConfig("8.8.4.4:9020");
         smartConfig.setProperty(ApacheHttpClient4Config.PROPERTY_HTTP_PARAMS, httpParams);
 
         final Client client = SmartClientFactory.createStandardClient(smartConfig);
@@ -123,7 +123,7 @@ public class SmartClientTest {
         Future future = Executors.newSingleThreadExecutor().submit(new Runnable() {
             @Override
             public void run() {
-                client.resource("http://10.4.4.180:9020/?ping").get(String.class);
+                client.resource("http://8.8.4.4:9020/?ping").get(String.class);
                 Assert.fail("response was not expected; choose an IP that is not in use");
             }
         });
