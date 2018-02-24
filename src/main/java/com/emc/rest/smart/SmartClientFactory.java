@@ -26,9 +26,6 @@
  */
 package com.emc.rest.smart;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandler;
 import com.sun.jersey.api.client.config.ClientConfig;
@@ -39,6 +36,9 @@ import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import com.sun.jersey.core.impl.provider.entity.ByteArrayProvider;
 import com.sun.jersey.core.impl.provider.entity.FileProvider;
 import com.sun.jersey.core.impl.provider.entity.InputStreamProvider;
+import org.codehaus.jackson.jaxrs.JacksonJaxbJsonProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class SmartClientFactory {
 
@@ -104,6 +104,9 @@ public final class SmartClientFactory {
 
         // add support for XML with no content-type
         clientConfig.getClasses().add(OctetStreamXmlProvider.class);
+
+        // add JSON support (using Jackson's ObjectMapper instead of JAXB marshalling)
+        clientConfig.getClasses().add(JacksonJaxbJsonProvider.class);
 
         // build Jersey client
         return new Client(clientHandler, clientConfig);

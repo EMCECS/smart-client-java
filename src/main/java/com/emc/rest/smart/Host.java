@@ -64,6 +64,7 @@ public class Host implements HostStats {
      * @param name the host name or IP address of this host
      */
     public Host(String name) {
+        if (name == null) throw new NullPointerException();
         this.name = name;
     }
 
