@@ -43,6 +43,7 @@ import org.junit.Test;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -106,6 +107,27 @@ public class SmartClientTest {
         l4j.info(Arrays.toString(smartConfig.getLoadBalancer().getHostStats()));
 
         Assert.assertEquals("at least one task failed", 100, successCount.intValue());
+    }
+
+    @Test
+    public void testPutJsonStream() throws Exception {
+        String endpointStr = TestConfig.getPropertyNotEmpty(PROP_ATMOS_ENDPOINTS);
+        String[] endpoints = endpointStr.split(",");
+        List<Host> initialHosts = new ArrayList<Host>();
+        for (String endpoint : endpoints) {
+            initialHosts.add(new Host(new URI(endpoint).getHost()));
+        }
+        byte[] data = "JSON Stream Test".getBytes();
+
+        SmartConfig smartConfig = new SmartConfig(initialHosts);
+        Client client = SmartClientFactory.createSmartClient(smartConfig);
+
+        // this is an illegal use of this resource, but we just want to make sure the request is sent
+        // (no exception when finding a MessageBodyWriter)
+        ClientResponse response = client.resource(endpoints[0]).path("/rest/service").type("application/json")
+                 .put(ClientResponse.class, new ByteArrayInputStream(data));
+
+        Assert.assertEquals(403, response.getStatus());
     }
 
     @Test

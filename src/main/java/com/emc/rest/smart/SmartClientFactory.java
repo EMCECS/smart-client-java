@@ -40,6 +40,8 @@ import org.codehaus.jackson.jaxrs.JacksonJaxbJsonProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.*;
+
 public final class SmartClientFactory {
 
     private static final Logger log = LoggerFactory.getLogger(SmartClientFactory.class);
@@ -106,7 +108,12 @@ public final class SmartClientFactory {
         clientConfig.getClasses().add(OctetStreamXmlProvider.class);
 
         // add JSON support (using Jackson's ObjectMapper instead of JAXB marshalling)
-        clientConfig.getClasses().add(JacksonJaxbJsonProvider.class);
+        JacksonJaxbJsonProvider jsonProvider = new JacksonJaxbJsonProvider();
+        // make sure we don't try to serialize any of these type hierarchies (clearly a bug in JacksonJsonProvider)
+        jsonProvider.addUntouchable(InputStream.class);
+        jsonProvider.addUntouchable(OutputStream.class);
+        jsonProvider.addUntouchable(File.class);
+        clientConfig.getSingletons().add(jsonProvider);
 
         // build Jersey client
         return new Client(clientHandler, clientConfig);
