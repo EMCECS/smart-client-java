@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, EMC Corporation.
+ * Copyright (c) 2015-2021, EMC Corporation.
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
@@ -24,29 +24,242 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-description = 'Smart REST Client - JAX-RS (Jersey) REST client that provides client-side load balancing with a pluggable host list provider'
-
-ext.githubProjectName = 'smart-client-java'
-
-buildscript {
-    ext.commonBuildVersion = '1.6'
-    ext.commonBuildDir = "https://raw.githubusercontent.com/emcvipr/ecs-common-build/v$commonBuildVersion"
-    apply from: "$commonBuildDir/ecs-publish.buildscript.gradle", to: buildscript
+plugins {
+    id 'idea'
+    id 'eclipse'
+    id 'java'
+    id 'net.saliman.cobertura' version '3.0.0'
+    id 'distribution'
+    id 'signing'
+    id 'maven'
+    id 'org.ajoberstar.git-publish' version '3.0.0'
+    id 'nebula.release' version '15.2.0'
 }
 
-apply from: "$commonBuildDir/ecs-publish.gradle"
+group 'com.emc.ecs'
+description = 'Smart REST Client - JAX-RS (Jersey) REST client that provides client-side load balancing with a pluggable host list provider'
+
+// name of the github project repository
+ext.githubProjectName = 'smart-client-java'
+// URL to github project
+ext.githubProjectUrl = "https://github.com/twincitiesguy/${githubProjectName}"
+// git remote scm address
+ext.githubScmUrl = "scm:git@github.com:twincitiesguy/${githubProjectName}.git"
+// git remote https address
+ext.githubRemoteUrl = "https://github.com/twincitiesguy/${githubProjectName}.git"
+// license info
+ext.licenseName = 'The BSD 3-Clause License'
+ext.licenseUrl = 'http://opensource.org/licenses/BSD-3-Clause'
+
+defaultTasks 'distZip'
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+    maven {
+        url "https://maven.atlassian.com/3rdparty/"
+    }
+}
 
 dependencies {
-    compile 'com.sun.jersey:jersey-client:1.19.4',
-            'com.sun.jersey.contribs:jersey-apache-client4:1.19.4',
-            'org.codehaus.jackson:jackson-jaxrs:1.9.13',
-            'org.codehaus.jackson:jackson-xc:1.9.13',
+    implementation 'log4j:log4j:1.2.17',
             'org.apache.httpcomponents:httpclient:4.2.6',
-            'org.slf4j:slf4j-api:1.7.5'
-    compile('com.sun.jersey:jersey-json:1.19.4') {
+            'org.slf4j:slf4j-api:1.7.5',
+            'com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.12.2'
+    implementation ('com.sun.jersey:jersey-json:1.19.4') {
         exclude group: 'org.codehaus.jackson'
     }
-    runtime 'org.slf4j:slf4j-log4j12:1.7.5'
-    testCompile 'junit:junit:4.12',
-            'log4j:log4j:1.2.17'
+    implementation 'com.sun.jersey.contribs:jersey-apache-client4:1.19.4'
+
+    runtimeOnly 'org.slf4j:slf4j-log4j12:1.7.5'
+    testImplementation 'junit:junit:4.12'
+}
+
+allprojects {
+    configurations {
+        tools // specifies tool artifacts for the distribution (placed in the tools/ directory)
+    }
+}
+
+configurations {
+    jars.extendsFrom(signatures)
+}
+
+[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+
+compileJava {
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
+}
+
+def projectPom = {
+    project {
+        name project.name
+        description project.description
+        url githubProjectUrl
+
+        scm {
+            url githubProjectUrl
+            connection githubScmUrl
+            developerConnection githubScmUrl
+        }
+
+        licenses {
+            license {
+                name licenseName
+                url licenseUrl
+                distribution 'repo'
+            }
+        }
+
+        developers {
+            developer {
+                id 'EMCECS'
+                name 'Dell EMC ECS'
+            }
+        }
+    }
+}
+
+task writePom {
+    ext.pomFile = file("$buildDir/pom.xml")
+    outputs.file pomFile
+    doLast {
+        pom(projectPom).writeTo pomFile
+    }
+}
+
+jar {
+    doFirst {
+        manifest {
+            attributes 'Implementation-Version': project.version,
+                    'Class-Path': configurations.runtime.collect { it.getName() }.join(' ')
+        }
+    }
+    into("META-INF/maven/$project.group/$project.name") {
+        from writePom
+    }
+}
+
+javadoc {
+    options.addStringOption('Xdoclint:none', '-quiet')
+}
+
+task javadocJar(type: Jar) {
+    archiveClassifier = 'javadoc'
+    from "${docsDir}/javadoc"
+}
+tasks.javadocJar.dependsOn javadoc
+
+task sourcesJar(type: Jar) {
+    archiveClassifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+artifacts {
+    jars jar
+    jars javadocJar
+    jars sourcesJar
+}
+
+distributions {
+    main {
+        contents {
+            from configurations.jars.artifacts.files
+            into('tools') {
+                from { allprojects.configurations.tools.artifacts.files }
+            }
+            from('.') {
+                include '*.txt'
+            }
+            into('3rd-party-licenses') {
+                from '3rd-party-licenses'
+            }
+            into('lib') {
+                from configurations.runtimeClasspath
+            }
+        }
+    }
+}
+
+signing {
+    required { gradle.taskGraph.hasTask(':uploadJars') }
+    sign configurations.jars
+}
+
+uploadJars {
+    repositories {
+        mavenDeployer {
+            beforeDeployment { deployment -> signing.signPom(deployment) }
+
+            repository(url: 'https://oss.sonatype.org/service/local/staging/deploy/maven2/') {
+                authentication(userName: '', password: '')
+            }
+
+            pom projectPom
+        }
+    }
+}
+
+ext.aggregatedDocsDir = "$buildDir/aggregatedDocs"
+task aggregateDocs {
+    doLast {
+        if (project.hasProperty('release.stage') && project.ext['release.stage'] == 'final') {
+            copy {
+                from docsDir
+                into "${aggregatedDocsDir}/latest"
+            }
+        }
+        copy {
+            from docsDir
+            into "${aggregatedDocsDir}/${project.version}"
+        }
+    }
+}
+tasks.aggregateDocs.dependsOn javadoc
+
+gitPublish {
+    repoUri = githubRemoteUrl
+    branch = 'gh-pages'
+    contents {
+        from aggregatedDocsDir
+    }
+    preserve { include '**/*' }
+}
+tasks.gitPublishPush.dependsOn aggregateDocs
+
+tasks.release.dependsOn test, uploadJars, gitPublishPush, distZip
+
+clean {
+    delete aggregatedDocsDir
+}
+
+// allow typing in credentials
+// note: this only works when run without the Gradle daemon (--no-daemon)
+gradle.taskGraph.whenReady { taskGraph ->
+    if (taskGraph.hasTask(':uploadJars')) {
+        if (!rootProject.hasProperty('signingSecretKeyRingFile'))
+            rootProject.ext.signingSecretKeyRingFile = new String(System.console().readLine('\nSecret key ring file: '))
+        if (!rootProject.hasProperty('signingKeyId'))
+            rootProject.ext.signingKeyId = new String(System.console().readLine('\nSigning key id: '))
+        if (!rootProject.hasProperty('signingPass'))
+            rootProject.ext.signingPass = new String(System.console().readPassword('\nSigning key passphrase: '))
+        if (!rootProject.hasProperty('sonatypeUser'))
+            rootProject.ext.sonatypeUser = new String(System.console().readLine('\nSonatype username: '))
+        if (!rootProject.hasProperty('sonatypePass'))
+            rootProject.ext.sonatypePass = new String(System.console().readPassword('\nSonatype password: '))
+        ext.'signing.keyId' = rootProject.ext.signingKeyId
+        ext.'signing.secretKeyRingFile' = rootProject.ext.signingSecretKeyRingFile
+        ext.'signing.password' = rootProject.ext.signingPass
+        uploadJars.repositories.mavenDeployer.repository.authentication.userName = rootProject.ext.sonatypeUser
+        uploadJars.repositories.mavenDeployer.repository.authentication.password = rootProject.ext.sonatypePass
+    }
+    if (taskGraph.hasTask(':gitPublishPush') || taskGraph.hasTask(':release')) {
+        if (!rootProject.hasProperty('gitUsername'))
+            rootProject.ext.gitUsername = new String(System.console().readLine('\nGit username: '))
+        if (!rootProject.hasProperty('gitPassword'))
+            rootProject.ext.gitPassword = new String(System.console().readPassword('\nGit password: '))
+        System.setProperty('org.ajoberstar.grgit.auth.username', rootProject.ext.gitUsername)
+        System.setProperty('org.ajoberstar.grgit.auth.password', rootProject.ext.gitPassword)
+    }
 }
