@@ -42,11 +42,11 @@ description = 'Smart REST Client - JAX-RS (Jersey) REST client that provides cli
 // name of the github project repository
 ext.githubProjectName = 'smart-client-java'
 // URL to github project
-ext.githubProjectUrl = "https://github.com/twincitiesguy/${githubProjectName}"
+ext.githubProjectUrl = "https://github.com/EMCECS/${githubProjectName}"
 // git remote scm address
-ext.githubScmUrl = "scm:git@github.com:twincitiesguy/${githubProjectName}.git"
+ext.githubScmUrl = "scm:git@github.com:EMCECS/${githubProjectName}.git"
 // git remote https address
-ext.githubRemoteUrl = "https://github.com/twincitiesguy/${githubProjectName}.git"
+ext.githubRemoteUrl = "https://github.com/EMCECS/${githubProjectName}.git"
 // license info
 ext.licenseName = 'The BSD 3-Clause License'
 ext.licenseUrl = 'http://opensource.org/licenses/BSD-3-Clause'
@@ -55,24 +55,21 @@ defaultTasks 'distZip'
 
 repositories {
     mavenCentral()
-    mavenLocal()
-    maven {
-        url "https://maven.atlassian.com/3rdparty/"
-    }
 }
 
 dependencies {
-    implementation 'log4j:log4j:1.2.17',
-            'org.apache.httpcomponents:httpclient:4.2.6',
+    implementation 'org.apache.httpcomponents:httpclient:4.2.6',
             'org.slf4j:slf4j-api:1.7.5',
-            'com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.12.2'
+            'com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.12.2',
+            'com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.12.2'
     implementation ('com.sun.jersey:jersey-json:1.19.4') {
         exclude group: 'org.codehaus.jackson'
     }
     implementation 'com.sun.jersey.contribs:jersey-apache-client4:1.19.4'
 
     runtimeOnly 'org.slf4j:slf4j-log4j12:1.7.5'
-    testImplementation 'junit:junit:4.12'
+    testImplementation 'junit:junit:4.12',
+            'log4j:log4j:1.2.17'
 }
 
 allprojects {
