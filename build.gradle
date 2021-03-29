@@ -61,7 +61,8 @@ dependencies {
     implementation 'org.apache.httpcomponents:httpclient:4.2.6',
             'org.slf4j:slf4j-api:1.7.5',
             'com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.12.2',
-            'com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.12.2'
+            'com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.12.2',
+            'com.sun.jersey:jersey-client:1.19.4'
     implementation ('com.sun.jersey:jersey-json:1.19.4') {
         exclude group: 'org.codehaus.jackson'
     }
