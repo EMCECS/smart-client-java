@@ -1,0 +1,17 @@
+description = 'Smart Client for Jersey 1.x - includes a SmartClientFactory'
+
+dependencies {
+    implementation project(':smart-client-core')
+    implementation 'org.slf4j:slf4j-api:1.7.5'
+    implementation 'com.sun.jersey:jersey-client:1.19.4'
+    implementation 'com.sun.jersey.contribs:jersey-apache-client4:1.19.4'
+    implementation 'org.apache.httpcomponents:httpclient:4.2.6'
+    implementation('com.sun.jersey:jersey-json:1.19.4') {
+        exclude group: 'org.codehaus.jackson'
+    }
+    implementation 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.12.1'
+    implementation 'com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.12.1'
+
+    testImplementation 'junit:junit:4.12'
+    testImplementation 'log4j:log4j:1.2.17'
+}

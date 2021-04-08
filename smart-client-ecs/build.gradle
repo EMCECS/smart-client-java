@@ -1,0 +1,12 @@
+description = 'Smart Client for ECS - '
+
+dependencies {
+    implementation project(':smart-client-core')
+    implementation project(':smart-client-jersey')
+    implementation 'org.slf4j:slf4j-api:1.7.5'
+    implementation 'com.sun.jersey:jersey-client:1.19.4'
+    implementation 'commons-codec:commons-codec:1.15'
+
+    testImplementation 'junit:junit:4.12'
+    testImplementation 'log4j:log4j:1.2.17'
+}

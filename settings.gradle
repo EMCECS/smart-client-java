@@ -1,1 +1,6 @@
 rootProject.name = 'smart-client'
+include 'smart-client-jersey'
+include 'smart-client-core'
+include 'smart-client-core'
+include 'smart-client-ecs'
+
