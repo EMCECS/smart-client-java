@@ -25,20 +25,6 @@ plugins {
     id 'nebula.release' version '15.2.0'
 }
 
-subprojects {
-    apply plugin: 'java'
-    apply plugin: 'net.saliman.cobertura'
-    apply plugin: 'distribution'
-    apply plugin: 'signing'
-    apply plugin: 'maven'
-    apply plugin: 'org.ajoberstar.git-publish'
-    apply plugin: 'nebula.release'
-}
-
-allprojects {
-    group 'com.emc.ecs'
-}
-
 // name of the github project repository
 ext.githubProjectName = 'smart-client-java'
 // URL to github project
@@ -51,7 +37,15 @@ ext.githubRemoteUrl = "https://github.com/EMCECS/${githubProjectName}.git"
 ext.licenseName = 'Apache License 2.0'
 ext.licenseUrl = 'http://www.apache.org/licenses/'
 
-allprojects {
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'net.saliman.cobertura'
+    apply plugin: 'distribution'
+    apply plugin: 'signing'
+    apply plugin: 'maven'
+
+    group 'com.emc.ecs'
+
     defaultTasks 'distZip'
 
     repositories {
@@ -174,6 +168,36 @@ allprojects {
             }
         }
     }
+
+    // allow typing in credentials
+    // note: this only works when run without the Gradle daemon (--no-daemon)
+    gradle.taskGraph.whenReady { taskGraph ->
+        if (taskGraph.allTasks.any { it instanceof Upload }) {
+            if (!rootProject.hasProperty('signingSecretKeyRingFile'))
+                rootProject.ext.signingSecretKeyRingFile = new String(System.console().readLine('\nSecret key ring file: '))
+            if (!rootProject.hasProperty('signingKeyId'))
+                rootProject.ext.signingKeyId = new String(System.console().readLine('\nSigning key id: '))
+            if (!rootProject.hasProperty('signingPass'))
+                rootProject.ext.signingPass = new String(System.console().readPassword('\nSigning key passphrase: '))
+            if (!rootProject.hasProperty('sonatypeUser'))
+                rootProject.ext.sonatypeUser = new String(System.console().readLine('\nSonatype username: '))
+            if (!rootProject.hasProperty('sonatypePass'))
+                rootProject.ext.sonatypePass = new String(System.console().readPassword('\nSonatype password: '))
+            ext.'signing.keyId' = rootProject.ext.signingKeyId
+            ext.'signing.secretKeyRingFile' = rootProject.ext.signingSecretKeyRingFile
+            ext.'signing.password' = rootProject.ext.signingPass
+            uploadJars.repositories.mavenDeployer.repository.authentication.userName = rootProject.ext.sonatypeUser
+            uploadJars.repositories.mavenDeployer.repository.authentication.password = rootProject.ext.sonatypePass
+        }
+        if (taskGraph.hasTask(':gitPublishPush') || taskGraph.hasTask(':release')) {
+            if (!rootProject.hasProperty('gitUsername'))
+                rootProject.ext.gitUsername = new String(System.console().readLine('\nGit username: '))
+            if (!rootProject.hasProperty('gitPassword'))
+                rootProject.ext.gitPassword = new String(System.console().readPassword('\nGit password: '))
+            System.setProperty('org.ajoberstar.grgit.auth.username', rootProject.ext.gitUsername)
+            System.setProperty('org.ajoberstar.grgit.auth.password', rootProject.ext.gitPassword)
+        }
+    }
 }
 
 ext.aggregatedDocsDir = "$buildDir/aggregatedDocs"
@@ -195,7 +219,7 @@ task aggregateDocs {
         }
     }
 }
-tasks.aggregateDocs.dependsOn javadoc
+tasks.aggregateDocs.dependsOn subprojects.javadoc
 
 gitPublish {
     repoUri = githubRemoteUrl
@@ -207,38 +231,8 @@ gitPublish {
 }
 tasks.gitPublishPush.dependsOn aggregateDocs
 
-tasks.release.dependsOn test, uploadJars, gitPublishPush, distZip
+tasks.release.dependsOn subprojects.test, subprojects.uploadJars, gitPublishPush, subprojects.distZip
 
 clean {
     delete aggregatedDocsDir
-}
-
-// allow typing in credentials
-// note: this only works when run without the Gradle daemon (--no-daemon)
-gradle.taskGraph.whenReady { taskGraph ->
-    if (taskGraph.hasTask(':uploadJars')) {
-        if (!rootProject.hasProperty('signingSecretKeyRingFile'))
-            rootProject.ext.signingSecretKeyRingFile = new String(System.console().readLine('\nSecret key ring file: '))
-        if (!rootProject.hasProperty('signingKeyId'))
-            rootProject.ext.signingKeyId = new String(System.console().readLine('\nSigning key id: '))
-        if (!rootProject.hasProperty('signingPass'))
-            rootProject.ext.signingPass = new String(System.console().readPassword('\nSigning key passphrase: '))
-        if (!rootProject.hasProperty('sonatypeUser'))
-            rootProject.ext.sonatypeUser = new String(System.console().readLine('\nSonatype username: '))
-        if (!rootProject.hasProperty('sonatypePass'))
-            rootProject.ext.sonatypePass = new String(System.console().readPassword('\nSonatype password: '))
-        ext.'signing.keyId' = rootProject.ext.signingKeyId
-        ext.'signing.secretKeyRingFile' = rootProject.ext.signingSecretKeyRingFile
-        ext.'signing.password' = rootProject.ext.signingPass
-        uploadJars.repositories.mavenDeployer.repository.authentication.userName = rootProject.ext.sonatypeUser
-        uploadJars.repositories.mavenDeployer.repository.authentication.password = rootProject.ext.sonatypePass
-    }
-    if (taskGraph.hasTask(':gitPublishPush') || taskGraph.hasTask(':release')) {
-        if (!rootProject.hasProperty('gitUsername'))
-            rootProject.ext.gitUsername = new String(System.console().readLine('\nGit username: '))
-        if (!rootProject.hasProperty('gitPassword'))
-            rootProject.ext.gitPassword = new String(System.console().readPassword('\nGit password: '))
-        System.setProperty('org.ajoberstar.grgit.auth.username', rootProject.ext.gitUsername)
-        System.setProperty('org.ajoberstar.grgit.auth.password', rootProject.ext.gitPassword)
-    }
 }
