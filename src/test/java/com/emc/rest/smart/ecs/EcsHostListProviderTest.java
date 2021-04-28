@@ -34,7 +34,11 @@ import com.sun.jersey.api.client.config.ClientConfig;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
 import com.sun.jersey.client.apache4.ApacheHttpClient4;
 import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
+import org.apache.http.client.HttpClient;
+import org.apache.http.impl.conn.PoolingClientConnectionManager;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import javax.xml.bind.JAXBContext;
@@ -55,49 +59,78 @@ public class EcsHostListProviderTest {
 
     public static final String PROXY_URI = "http.proxyUri";
 
-    @Test
-    public void testEcsHostListProvider() throws Exception {
+    private URI serverURI;
+    private String user;
+    private String secret;
+    private String proxyUri;
+    private Client client;
+    private EcsHostListProvider hostListProvider;
+
+    @Before
+    public void before() throws Exception {
         Properties properties = TestConfig.getProperties();
 
-        URI serverURI = new URI(TestConfig.getPropertyNotEmpty(properties, S3_ENDPOINT));
-        String user = TestConfig.getPropertyNotEmpty(properties, S3_ACCESS_KEY);
-        String secret = TestConfig.getPropertyNotEmpty(properties, S3_SECRET_KEY);
-        String proxyUri = properties.getProperty(PROXY_URI);
+        serverURI = new URI(TestConfig.getPropertyNotEmpty(properties, S3_ENDPOINT));
+        user = TestConfig.getPropertyNotEmpty(properties, S3_ACCESS_KEY);
+        secret = TestConfig.getPropertyNotEmpty(properties, S3_SECRET_KEY);
+        proxyUri = properties.getProperty(PROXY_URI);
 
         ClientConfig clientConfig = new DefaultClientConfig();
+        clientConfig.getProperties().put(ApacheHttpClient4Config.PROPERTY_CONNECTION_MANAGER, new PoolingClientConnectionManager());
         if (proxyUri != null) clientConfig.getProperties().put(ApacheHttpClient4Config.PROPERTY_PROXY_URI, proxyUri);
-        Client client = ApacheHttpClient4.create(clientConfig);
+        client = ApacheHttpClient4.create(clientConfig);
 
         SmartConfig smartConfig = new SmartConfig(serverURI.getHost());
 
-        EcsHostListProvider hostListProvider = new EcsHostListProvider(client, smartConfig.getLoadBalancer(), user, secret);
+        hostListProvider = new EcsHostListProvider(client, smartConfig.getLoadBalancer(), user, secret);
         hostListProvider.setProtocol(serverURI.getScheme());
         hostListProvider.setPort(serverURI.getPort());
+    }
 
+    @After
+    public void after() {
+        if (hostListProvider != null) hostListProvider.destroy();
+    }
+
+    @Test
+    public void testEcsHostListProvider() throws Exception {
         List<Host> hostList = hostListProvider.getHostList();
 
         Assert.assertTrue("server list is empty", hostList.size() > 0);
     }
 
+    // intended to make sure we do not keep connections alive for any maintenance-related calls
+    // to ensure that each client instance does not consume an active connection on each ECS node just for health-checks
+    @Test
+    public void testNoKeepAlive() {
+        // verify client has no open connections
+        HttpClient httpClient = ((ApacheHttpClient4) client).getClientHandler().getHttpClient();
+        PoolingClientConnectionManager connectionManager = (PoolingClientConnectionManager) httpClient.getConnectionManager();
+        Assert.assertEquals(0, connectionManager.getTotalStats().getAvailable());
+        Assert.assertEquals(0, connectionManager.getTotalStats().getLeased());
+        Assert.assertEquals(0, connectionManager.getTotalStats().getPending());
+
+        // ?endpoint call
+        List<Host> hosts = hostListProvider.getHostList();
+
+        // verify client still has no open connections
+        Assert.assertEquals(0, connectionManager.getTotalStats().getAvailable());
+        Assert.assertEquals(0, connectionManager.getTotalStats().getLeased());
+        Assert.assertEquals(0, connectionManager.getTotalStats().getPending());
+
+        // ?ping calls
+        for (Host host : hosts) {
+            hostListProvider.runHealthCheck(host);
+        }
+
+        // verify client still has no open connections
+        Assert.assertEquals(0, connectionManager.getTotalStats().getAvailable());
+        Assert.assertEquals(0, connectionManager.getTotalStats().getLeased());
+        Assert.assertEquals(0, connectionManager.getTotalStats().getPending());
+    }
+
     @Test
     public void testHealthCheck() throws Exception {
-        Properties properties = TestConfig.getProperties();
-
-        URI serverURI = new URI(TestConfig.getPropertyNotEmpty(properties, S3_ENDPOINT));
-        String user = TestConfig.getPropertyNotEmpty(properties, S3_ACCESS_KEY);
-        String secret = TestConfig.getPropertyNotEmpty(properties, S3_SECRET_KEY);
-        String proxyUri = properties.getProperty(PROXY_URI);
-
-        ClientConfig clientConfig = new DefaultClientConfig();
-        if (proxyUri != null) clientConfig.getProperties().put(ApacheHttpClient4Config.PROPERTY_PROXY_URI, proxyUri);
-        Client client = ApacheHttpClient4.create(clientConfig);
-
-        SmartConfig smartConfig = new SmartConfig(serverURI.getHost());
-
-        EcsHostListProvider hostListProvider = new EcsHostListProvider(client, smartConfig.getLoadBalancer(), user, secret);
-        hostListProvider.setProtocol(serverURI.getScheme());
-        hostListProvider.setPort(serverURI.getPort());
-
         for (Host host : hostListProvider.getHostList()) {
             hostListProvider.runHealthCheck(host);
         }
@@ -140,15 +173,6 @@ public class EcsHostListProviderTest {
 
     @Test
     public void testPing() throws Exception {
-        Properties properties = TestConfig.getProperties();
-
-        URI serverURI = new URI(TestConfig.getPropertyNotEmpty(properties, S3_ENDPOINT));
-        String proxyUri = properties.getProperty(PROXY_URI);
-
-        ClientConfig clientConfig = new DefaultClientConfig();
-        if (proxyUri != null) clientConfig.getProperties().put(ApacheHttpClient4Config.PROPERTY_PROXY_URI, proxyUri);
-        Client client = ApacheHttpClient4.create(clientConfig);
-
         String portStr = serverURI.getPort() > 0 ? ":" + serverURI.getPort() : "";
 
         PingResponse response = client.resource(
@@ -160,23 +184,6 @@ public class EcsHostListProviderTest {
 
     @Test
     public void testVdcs() throws Exception {
-        Properties properties = TestConfig.getProperties();
-
-        URI serverURI = new URI(TestConfig.getPropertyNotEmpty(properties, S3_ENDPOINT));
-        String user = TestConfig.getPropertyNotEmpty(properties, S3_ACCESS_KEY);
-        String secret = TestConfig.getPropertyNotEmpty(properties, S3_SECRET_KEY);
-        String proxyUri = properties.getProperty(PROXY_URI);
-
-        ClientConfig clientConfig = new DefaultClientConfig();
-        if (proxyUri != null) clientConfig.getProperties().put(ApacheHttpClient4Config.PROPERTY_PROXY_URI, proxyUri);
-        Client client = ApacheHttpClient4.create(clientConfig);
-
-        SmartConfig smartConfig = new SmartConfig(serverURI.getHost());
-
-        EcsHostListProvider hostListProvider = new EcsHostListProvider(client, smartConfig.getLoadBalancer(), user, secret);
-        hostListProvider.setProtocol(serverURI.getScheme());
-        hostListProvider.setPort(serverURI.getPort());
-
         Vdc vdc1 = new Vdc(serverURI.getHost()).withName("vdc1");
         Vdc vdc2 = new Vdc(serverURI.getHost()).withName("vdc2");
         Vdc vdc3 = new Vdc(serverURI.getHost()).withName("vdc3");
