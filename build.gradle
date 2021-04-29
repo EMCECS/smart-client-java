@@ -38,7 +38,6 @@ plugins {
 
 group 'com.emc.ecs'
 description = 'Smart REST Client - JAX-RS (Jersey) REST client that provides client-side load balancing with a pluggable host list provider'
-version '2.3.0'
 
 // name of the github project repository
 ext.githubProjectName = 'smart-client-java'
