@@ -100,7 +100,9 @@ public class EcsHostListProvider implements HostListProvider {
     @Override
     public void runHealthCheck(Host host) {
         // header is workaround for STORAGE-1833
-        PingResponse response = client.resource(getRequestUri(host, "/?ping")).header("x-emc-namespace", "x")
+        PingResponse response = client.resource(getRequestUri(host, "/?ping"))
+                .header("x-emc-namespace", "x")
+                .header("Connection", "close") // make sure maintenance calls are not kept alive
                 .get(PingResponse.class);
 
         if (host instanceof VdcHost) {
@@ -144,6 +146,8 @@ public class EcsHostListProvider implements HostListProvider {
         // add date and auth headers
         request.header("Date", rfcDate);
         request.header("Authorization", "AWS " + user + ":" + signature);
+        // make sure maintenance calls are not kept alive
+        request.header("Connection", "close");
 
         // make REST call
         log.debug("retrieving VDC node list from {}", host.getName());
