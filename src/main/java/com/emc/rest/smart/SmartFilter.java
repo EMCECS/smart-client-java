@@ -61,7 +61,8 @@ public class SmartFilter extends ClientFilter {
         URI uri = request.getURI();
         try {
             org.apache.http.HttpHost httpHost = new org.apache.http.HttpHost(host.getName(), uri.getPort(), uri.getScheme());
-            uri = org.apache.http.client.utils.URIUtils.rewriteURI(uri, httpHost);
+            // NOTE: flags were added in httpclient 4.5.8 to allow for no normalization (which matches behavior prior to 4.5.7)
+            uri = org.apache.http.client.utils.URIUtils.rewriteURI(uri, httpHost, org.apache.http.client.utils.URIUtils.NO_FLAGS);
         } catch (URISyntaxException e) {
             throw new RuntimeException("load-balanced host generated invalid URI", e);
         }
