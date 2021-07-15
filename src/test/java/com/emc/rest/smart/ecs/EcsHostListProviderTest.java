@@ -60,9 +60,6 @@ public class EcsHostListProviderTest {
     public static final String PROXY_URI = "http.proxyUri";
 
     private URI serverURI;
-    private String user;
-    private String secret;
-    private String proxyUri;
     private Client client;
     private EcsHostListProvider hostListProvider;
 
@@ -71,9 +68,9 @@ public class EcsHostListProviderTest {
         Properties properties = TestConfig.getProperties();
 
         serverURI = new URI(TestConfig.getPropertyNotEmpty(properties, S3_ENDPOINT));
-        user = TestConfig.getPropertyNotEmpty(properties, S3_ACCESS_KEY);
-        secret = TestConfig.getPropertyNotEmpty(properties, S3_SECRET_KEY);
-        proxyUri = properties.getProperty(PROXY_URI);
+        String user = TestConfig.getPropertyNotEmpty(properties, S3_ACCESS_KEY);
+        String secret = TestConfig.getPropertyNotEmpty(properties, S3_SECRET_KEY);
+        String proxyUri = properties.getProperty(PROXY_URI);
 
         ClientConfig clientConfig = new DefaultClientConfig();
         clientConfig.getProperties().put(ApacheHttpClient4Config.PROPERTY_CONNECTION_MANAGER, new PoolingClientConnectionManager());
@@ -93,7 +90,7 @@ public class EcsHostListProviderTest {
     }
 
     @Test
-    public void testEcsHostListProvider() throws Exception {
+    public void testEcsHostListProvider() {
         List<Host> hostList = hostListProvider.getHostList();
 
         Assert.assertTrue("server list is empty", hostList.size() > 0);
@@ -130,7 +127,7 @@ public class EcsHostListProviderTest {
     }
 
     @Test
-    public void testHealthCheck() throws Exception {
+    public void testHealthCheck() {
         for (Host host : hostListProvider.getHostList()) {
             hostListProvider.runHealthCheck(host);
         }
@@ -172,7 +169,7 @@ public class EcsHostListProviderTest {
     }
 
     @Test
-    public void testPing() throws Exception {
+    public void testPing() {
         String portStr = serverURI.getPort() > 0 ? ":" + serverURI.getPort() : "";
 
         PingResponse response = client.resource(
@@ -183,7 +180,7 @@ public class EcsHostListProviderTest {
     }
 
     @Test
-    public void testVdcs() throws Exception {
+    public void testVdcs() {
         Vdc vdc1 = new Vdc(serverURI.getHost()).withName("vdc1");
         Vdc vdc2 = new Vdc(serverURI.getHost()).withName("vdc2");
         Vdc vdc3 = new Vdc(serverURI.getHost()).withName("vdc3");
@@ -209,7 +206,7 @@ public class EcsHostListProviderTest {
                 "</PingList>";
 
         PingResponse object = new PingResponse();
-        Map<String, PingItem> map = new TreeMap<String, PingItem>();
+        Map<String, PingItem> map = new TreeMap<>();
         map.put("LOAD_FACTOR", new PingItem("LOAD_FACTOR", null, null, "1"));
         map.put("MAINTENANCE_MODE", new PingItem("MAINTENANCE_MODE", PingItem.Status.OFF, "Data Node is Available", null));
         object.setPingItemMap(map);

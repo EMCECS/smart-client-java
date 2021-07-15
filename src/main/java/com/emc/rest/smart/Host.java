@@ -42,14 +42,13 @@ import java.util.Date;
  *     </ul>
  */
 public class Host implements HostStats {
-
     private static final Logger log = LoggerFactory.getLogger(Host.class);
 
     public static final int DEFAULT_ERROR_WAIT_MS = 1500;
     public static final int LOG_DELAY = 60000; // 1 minute
     public static final int MAX_COOL_DOWN_EXP = 4;
 
-    private String name;
+    private final String name;
     private boolean healthy = true;
     protected int errorWaitTime = DEFAULT_ERROR_WAIT_MS;
 
@@ -81,7 +80,7 @@ public class Host implements HostStats {
         if (openConnections < 0) {
             long currentTime = System.currentTimeMillis();
             if (currentTime - lastLogTime > LOG_DELAY) {
-                log.warn("openConnections for host {} is {} !", this.toString(), Integer.toString(openConnections));
+                log.warn("openConnections for host {} is {} !", this, openConnections);
                 lastLogTime = currentTime;
             }
         }
@@ -174,7 +173,7 @@ public class Host implements HostStats {
     @Override
     public String toString() {
         return String.format("%s{totalConnections=%d, totalErrors=%d, openConnections=%d, lastConnectionTime=%s}",
-                name, totalConnections, totalErrors, openConnections, new Date(lastConnectionTime).toString());
+                name, totalConnections, totalErrors, openConnections, new Date(lastConnectionTime));
     }
 
     public int getErrorWaitTime() {

@@ -34,11 +34,11 @@ import java.util.List;
 
 public class Vdc implements Iterable<VdcHost> {
     private String name;
-    private List<VdcHost> hosts;
+    private final List<VdcHost> hosts;
 
     public Vdc(String... hostNames) {
         this.name = hostNames[0];
-        hosts = new ArrayList<VdcHost>();
+        hosts = new ArrayList<>();
         for (String hostName : hostNames) {
             hosts.add(new VdcHost(this, hostName));
         }
@@ -66,7 +66,7 @@ public class Vdc implements Iterable<VdcHost> {
     }
 
     protected List<VdcHost> createVdcHosts(List<? extends Host> hosts) {
-        List<VdcHost> vdcHosts = new ArrayList<VdcHost>();
+        List<VdcHost> vdcHosts = new ArrayList<>();
         for (Host host : hosts) {
             vdcHosts.add(new VdcHost(this, host.getName()));
         }

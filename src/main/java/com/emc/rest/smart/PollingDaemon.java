@@ -37,7 +37,7 @@ public class PollingDaemon extends Thread {
 
     private static final Logger log = LoggerFactory.getLogger(PollingDaemon.class);
 
-    private SmartConfig smartConfig;
+    private final SmartConfig smartConfig;
     private boolean running = true;
 
     public PollingDaemon(SmartConfig smartConfig) {
@@ -85,9 +85,9 @@ public class PollingDaemon extends Thread {
 
             long callTime = System.currentTimeMillis() - start;
             try {
-                long sleepTime = smartConfig.getPollInterval() * 1000 - callTime;
+                long sleepTime = smartConfig.getPollInterval() * 1000L - callTime;
                 if (sleepTime < 0) sleepTime = 0;
-                log.debug("polling daemon finished; will poll again in {}ms..", Long.toString(sleepTime));
+                log.debug("polling daemon finished; will poll again in {}ms..", sleepTime);
                 if (sleepTime > 0) Thread.sleep(sleepTime);
             } catch (InterruptedException e) {
                 log.warn("interrupted while sleeping", e);

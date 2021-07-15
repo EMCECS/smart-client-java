@@ -40,7 +40,7 @@ import java.net.URISyntaxException;
 public class SmartFilter extends ClientFilter {
     public static final String BYPASS_LOAD_BALANCER = "com.emc.rest.smart.bypassLoadBalancer";
 
-    private SmartConfig smartConfig;
+    private final SmartConfig smartConfig;
 
     public SmartFilter(SmartConfig smartConfig) {
         this.smartConfig = smartConfig;
@@ -75,12 +75,8 @@ public class SmartFilter extends ClientFilter {
             ClientResponse response = getNext().handle(request);
 
             // capture request stats
-            if (response.getStatus() >= 500 && response.getStatus() != 501) {
-                // except for 501 (not implemented), all 50x responses are considered server errors
-                host.callComplete(true);
-            } else {
-                host.callComplete(false);
-            }
+            // except for 501 (not implemented), all 50x responses are considered server errors
+            host.callComplete(response.getStatus() >= 500 && response.getStatus() != 501);
 
             // wrap the input stream so we can capture the actual connection close
             response.setEntityInputStream(new WrappedInputStream(response.getEntityInputStream(), host));
@@ -99,8 +95,8 @@ public class SmartFilter extends ClientFilter {
     /**
      * captures closure in host statistics
      */
-    protected class WrappedInputStream extends FilterInputStream {
-        private Host host;
+    protected static class WrappedInputStream extends FilterInputStream {
+        private final Host host;
         private boolean closed = false;
 
         public WrappedInputStream(InputStream in, Host host) {

@@ -38,7 +38,7 @@ public class TestHealthCheck {
     private static final Logger l4j = Logger.getLogger(TestHealthCheck.class);
 
     @Test
-    public void testUnhealthyHostIgnored() throws Exception {
+    public void testUnhealthyHostIgnored() {
         String[] hostList = new String[]{"foo", "bar", "baz", "biz"};
         final int callCount = 1000;
 
@@ -131,8 +131,8 @@ public class TestHealthCheck {
         }
     }
 
-    class TestHostListProvider implements HostListProvider {
-        private Host host;
+    static class TestHostListProvider implements HostListProvider {
+        private final Host host;
         boolean healthy;
 
         public TestHostListProvider(Host host, boolean healthy) {

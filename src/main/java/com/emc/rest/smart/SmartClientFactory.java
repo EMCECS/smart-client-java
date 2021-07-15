@@ -147,7 +147,7 @@ public final class SmartClientFactory {
         ClientConfig clientConfig = new DefaultClientConfig();
 
         // set up multi-threaded connection pool
-        org.apache.http.impl.conn.PoolingClientConnectionManager connectionManager = new org.apache.http.impl.conn.PoolingClientConnectionManager();
+        org.apache.http.impl.conn.PoolingHttpClientConnectionManager connectionManager = new org.apache.http.impl.conn.PoolingHttpClientConnectionManager();
         // 999 maximum active connections (max allowed)
         connectionManager.setDefaultMaxPerRoute(999);
         connectionManager.setMaxTotal(999);

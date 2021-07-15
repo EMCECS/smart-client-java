@@ -34,8 +34,8 @@ import java.io.InputStream;
  * reached its end when the specified size has been read.
  */
 public class SizedInputStream extends InputStream {
-    private InputStream source;
-    private long size;
+    private final InputStream source;
+    private final long size;
     private long read = 0;
 
     public SizedInputStream(InputStream source, long size) {
