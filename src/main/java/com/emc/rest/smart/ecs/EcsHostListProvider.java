@@ -39,6 +39,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -50,10 +51,10 @@ public class EcsHostListProvider implements HostListProvider {
     public static final int DEFAULT_PORT = 9021;
 
     protected final SimpleDateFormat rfc822DateFormat;
-    private Client client;
-    private LoadBalancer loadBalancer;
-    private String user;
-    private String secret;
+    private final Client client;
+    private final LoadBalancer loadBalancer;
+    private final String user;
+    private final String secret;
     private String protocol = DEFAULT_PROTOCOL;
     private int port = DEFAULT_PORT;
     private List<Vdc> vdcs;
@@ -70,7 +71,7 @@ public class EcsHostListProvider implements HostListProvider {
     public List<Host> getHostList() {
         if (vdcs == null || vdcs.isEmpty()) return getDataNodes(loadBalancer.getTopHost(null));
 
-        List<Host> hostList = new ArrayList<Host>();
+        List<Host> hostList = new ArrayList<>();
 
         for (Vdc vdc : vdcs) {
             if (vdc.getHosts().isEmpty()) log.warn("VDC " + vdc.getName() + " has no hosts!");
@@ -111,8 +112,7 @@ public class EcsHostListProvider implements HostListProvider {
                 PingItem pingItem = response.getPingItemMap().get(PingItem.MAINTENANCE_MODE);
                 if (pingItem != null) status = pingItem.getStatus();
             }
-            if (status == PingItem.Status.ON) ((VdcHost) host).setMaintenanceMode(true);
-            else ((VdcHost) host).setMaintenanceMode(false);
+            ((VdcHost) host).setMaintenanceMode(status == PingItem.Status.ON);
         }
     }
 
@@ -153,7 +153,7 @@ public class EcsHostListProvider implements HostListProvider {
         log.debug("retrieving VDC node list from {}", host.getName());
         List<String> dataNodes = request.get(ListDataNode.class).getDataNodes();
 
-        List<Host> hosts = new ArrayList<Host>();
+        List<Host> hosts = new ArrayList<>();
         for (String node : dataNodes) {
             hosts.add(new Host(node));
         }
@@ -171,8 +171,8 @@ public class EcsHostListProvider implements HostListProvider {
 
     protected String getSignature(String canonicalString, String secret) throws Exception {
         Mac mac = Mac.getInstance("HmacSHA1");
-        mac.init(new SecretKeySpec(secret.getBytes("UTF-8"), "HmacSHA1"));
-        String signature = new String(Base64.encodeBase64(mac.doFinal(canonicalString.getBytes("UTF-8"))));
+        mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA1"));
+        String signature = new String(Base64.encodeBase64(mac.doFinal(canonicalString.getBytes(StandardCharsets.UTF_8))));
         log.debug("canonicalString:\n" + canonicalString);
         log.debug("signature:\n" + signature);
         return signature;
@@ -182,7 +182,7 @@ public class EcsHostListProvider implements HostListProvider {
         if (nodeList == null || nodeList.isEmpty()) throw new RuntimeException("node list is empty");
 
         // make sure the hosts are associated with the VDC first
-        List<VdcHost> vdcNodeList = new ArrayList<VdcHost>();
+        List<VdcHost> vdcNodeList = new ArrayList<>();
         for (Host host : nodeList) {
             vdcNodeList.add(new VdcHost(vdc, host.getName()));
         }

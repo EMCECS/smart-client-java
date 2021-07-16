@@ -45,6 +45,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayInputStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -59,7 +60,7 @@ public class SmartClientTest {
     public static final String PROP_ATMOS_SECRET = "atmos.secret";
 
     private static final String HEADER_FORMAT = "EEE, d MMM yyyy HH:mm:ss z";
-    private static final ThreadLocal<DateFormat> headerFormat = new ThreadLocal<DateFormat>();
+    private static final ThreadLocal<DateFormat> headerFormat = new ThreadLocal<>();
 
     @Test
     public void testAtmosOnEcs() throws Exception {
@@ -76,7 +77,7 @@ public class SmartClientTest {
         String[] endpoints = endpointStr.split(",");
         final URI serverUri = new URI(endpointStr.split(",")[0]);
 
-        List<Host> initialHosts = new ArrayList<Host>();
+        List<Host> initialHosts = new ArrayList<>();
         for (String endpoint : endpoints) {
             initialHosts.add(new Host(new URI(endpoint).getHost()));
         }
@@ -87,15 +88,12 @@ public class SmartClientTest {
         ExecutorService service = Executors.newFixedThreadPool(10);
 
         final AtomicInteger successCount = new AtomicInteger();
-        List<Future<?>> futures = new ArrayList<Future<?>>();
+        List<Future<?>> futures = new ArrayList<>();
 
         for (int i = 0; i < 100; i++) {
-            futures.add(service.submit(new Runnable() {
-                @Override
-                public void run() {
-                    getServiceInfo(client, serverUri, uid, secret);
-                    successCount.incrementAndGet();
-                }
+            futures.add(service.submit(() -> {
+                getServiceInfo(client, serverUri, uid, secret);
+                successCount.incrementAndGet();
             }));
         }
 
@@ -113,7 +111,7 @@ public class SmartClientTest {
     public void testPutJsonStream() throws Exception {
         String endpointStr = TestConfig.getPropertyNotEmpty(PROP_ATMOS_ENDPOINTS);
         String[] endpoints = endpointStr.split(",");
-        List<Host> initialHosts = new ArrayList<Host>();
+        List<Host> initialHosts = new ArrayList<>();
         for (String endpoint : endpoints) {
             initialHosts.add(new Host(new URI(endpoint).getHost()));
         }
@@ -142,12 +140,9 @@ public class SmartClientTest {
 
         final Client client = SmartClientFactory.createStandardClient(smartConfig);
 
-        Future future = Executors.newSingleThreadExecutor().submit(new Runnable() {
-            @Override
-            public void run() {
-                client.resource("http://8.8.4.4:9020/?ping").get(String.class);
-                Assert.fail("response was not expected; choose an IP that is not in use");
-            }
+        Future<?> future = Executors.newSingleThreadExecutor().submit(() -> {
+            client.resource("http://8.8.4.4:9020/?ping").get(String.class);
+            Assert.fail("response was not expected; choose an IP that is not in use");
         });
 
         try {
@@ -183,8 +178,8 @@ public class SmartClientTest {
 
     private String sign(String canonicalString, String secretKey) {
         try {
-            byte[] hashKey = Base64.decodeBase64(secretKey.getBytes("UTF-8"));
-            byte[] input = canonicalString.getBytes("UTF-8");
+            byte[] hashKey = Base64.decodeBase64(secretKey.getBytes(StandardCharsets.UTF_8));
+            byte[] input = canonicalString.getBytes(StandardCharsets.UTF_8);
 
             Mac mac = Mac.getInstance("HmacSHA1");
             SecretKeySpec key = new SecretKeySpec(hashKey, "HmacSHA1");
@@ -192,7 +187,7 @@ public class SmartClientTest {
 
             byte[] hashBytes = mac.doFinal(input);
 
-            return new String(Base64.encodeBase64(hashBytes), "UTF-8");
+            return new String(Base64.encodeBase64(hashBytes), StandardCharsets.UTF_8);
         } catch (Exception e) {
             throw new RuntimeException("Error signing string:\n" + canonicalString + "\n", e);
         }

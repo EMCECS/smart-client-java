@@ -48,7 +48,7 @@ import java.lang.reflect.Type;
 @Produces("application/octet-stream")
 @Consumes("application/octet-stream")
 public class OctetStreamXmlProvider implements MessageBodyReader<Object> {
-    private MessageBodyReader<Object> delegate;
+    private final MessageBodyReader<Object> delegate;
 
     public OctetStreamXmlProvider(@Context Injectable<SAXParserFactory> spf, @Context Providers ps) {
         this.delegate = new XMLRootElementProvider.General(spf, ps);

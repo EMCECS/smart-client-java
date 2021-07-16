@@ -42,19 +42,19 @@ public class SmartConfig {
     private String proxyUser;
     private String proxyPass;
 
-    private LoadBalancer loadBalancer;
+    private final LoadBalancer loadBalancer;
     private HostListProvider hostListProvider;
     private int pollInterval = DEFAULT_POLL_INTERVAL;
     private boolean hostUpdateEnabled = true;
     private boolean healthCheckEnabled = true;
 
-    private Map<String, Object> properties = new HashMap<String, Object>();
+    private final Map<String, Object> properties = new HashMap<>();
 
     /**
      * @see #SmartConfig(LoadBalancer)
      */
     public SmartConfig(String... initialHostNames) {
-        List<Host> hostList = new ArrayList<Host>();
+        List<Host> hostList = new ArrayList<>();
         for (String hostName : initialHostNames) {
             hostList.add(new Host(hostName));
         }

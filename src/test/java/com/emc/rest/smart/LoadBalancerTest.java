@@ -45,7 +45,7 @@ public class LoadBalancerTest {
     private static final Logger l4j = Logger.getLogger(LoadBalancerTest.class);
 
     @Test
-    public void testDistribution() throws Exception {
+    public void testDistribution() {
         String[] hostList = new String[]{"foo", "bar", "baz", "biz"};
         final int callCount = 1000;
 
@@ -80,7 +80,7 @@ public class LoadBalancerTest {
 
         // make one meeeeeellion calls ;)
         ExecutorService service = Executors.newFixedThreadPool(32);
-        List<Future<Long>> futures = new ArrayList<Future<Long>>();
+        List<Future<Long>> futures = new ArrayList<>();
 
         for (int i = 0; i < 1000000; i++) {
             futures.add(service.submit(new LBOverheadTask(loadBalancer)));
@@ -100,7 +100,7 @@ public class LoadBalancerTest {
         Assert.assertTrue("call overhead too high", perCallOverhead < 100000); // must be less than .1ms
     }
 
-    class LBOverheadTask implements Callable<Long> {
+    static class LBOverheadTask implements Callable<Long> {
         LoadBalancer loadBalancer;
 
         public LBOverheadTask(LoadBalancer loadBalancer) {
@@ -108,7 +108,7 @@ public class LoadBalancerTest {
         }
 
         @Override
-        public Long call() throws Exception {
+        public Long call() {
             long start = System.nanoTime();
             Host host = loadBalancer.getTopHost(null);
             host.connectionOpened();

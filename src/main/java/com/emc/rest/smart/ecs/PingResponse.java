@@ -36,7 +36,7 @@ import java.util.Map;
 
 @XmlRootElement(name = "PingList")
 public class PingResponse {
-    private List<PingItem> pingItems = new ArrayList<PingItem>();
+    private List<PingItem> pingItems = new ArrayList<>();
 
     @XmlElement(name = "PingItem")
     public List<PingItem> getPingItems() {
@@ -51,7 +51,7 @@ public class PingResponse {
     public Map<String, PingItem> getPingItemMap() {
         Map<String, PingItem> pingItemMap = null;
         if (pingItems != null) {
-            pingItemMap = new HashMap<String, PingItem>();
+            pingItemMap = new HashMap<>();
             for (PingItem item : pingItems) {
                 pingItemMap.put(item.getName(), item);
             }
@@ -60,6 +60,6 @@ public class PingResponse {
     }
 
     public void setPingItemMap(Map<String, PingItem> pingItemMap) {
-        this.pingItems = new ArrayList<PingItem>(pingItemMap.values());
+        this.pingItems = new ArrayList<>(pingItemMap.values());
     }
 }

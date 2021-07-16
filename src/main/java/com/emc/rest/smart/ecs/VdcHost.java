@@ -29,7 +29,7 @@ package com.emc.rest.smart.ecs;
 import com.emc.rest.smart.Host;
 
 public class VdcHost extends Host {
-    private Vdc vdc;
+    private final Vdc vdc;
     private boolean maintenanceMode;
 
     public VdcHost(Vdc vdc, String name) {

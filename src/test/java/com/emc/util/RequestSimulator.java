@@ -37,10 +37,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class RequestSimulator implements Runnable {
-    private LoadBalancer loadBalancer;
-    private int callCount;
+    private final LoadBalancer loadBalancer;
+    private final int callCount;
     private RequestExecutor requestExecutor;
-    private List<Throwable> errors = new ArrayList<Throwable>();
+    private final List<Throwable> errors = new ArrayList<>();
 
     public RequestSimulator(LoadBalancer loadBalancer, int callCount) {
         this.loadBalancer = loadBalancer;
@@ -53,35 +53,32 @@ public class RequestSimulator implements Runnable {
 
         // simulate callCount successful calls with identical response times
         ExecutorService executorService = Executors.newFixedThreadPool(10);
-        List<Future> futures = new ArrayList<Future>();
+        List<Future<?>> futures = new ArrayList<>();
         for (int i = 0; i < callCount; i++) {
-            futures.add(executorService.submit(new Runnable() {
-                @Override
-                public void run() {
-                    int waitMs;
-                    synchronized (random) {
-                        waitMs = random.nextInt(20);
-                    }
-                    try {
-                        Thread.sleep(waitMs);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    Host host = loadBalancer.getTopHost(null);
-                    host.connectionOpened();
-                    try {
-                        if (requestExecutor != null) requestExecutor.execute(host);
-                        host.callComplete(false);
-                    } catch (Throwable t) {
-                        host.callComplete(true);
-                    }
-                    host.connectionClosed();
+            futures.add(executorService.submit(() -> {
+                int waitMs;
+                synchronized (random) {
+                    waitMs = random.nextInt(20);
                 }
+                try {
+                    Thread.sleep(waitMs);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                Host host = loadBalancer.getTopHost(null);
+                host.connectionOpened();
+                try {
+                    if (requestExecutor != null) requestExecutor.execute(host);
+                    host.callComplete(false);
+                } catch (Throwable t) {
+                    host.callComplete(true);
+                }
+                host.connectionClosed();
             }));
         }
 
         // wait for tasks to finish
-        for (Future future : futures) {
+        for (Future<?> future : futures) {
             try {
                 future.get();
             } catch (Throwable t) {

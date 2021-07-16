@@ -29,7 +29,7 @@ package com.emc.rest.smart;
 import java.util.*;
 
 public class LoadBalancer {
-    private final Deque<Host> hosts = new ArrayDeque<Host>();
+    private final Deque<Host> hosts = new ArrayDeque<>();
     private List<HostVetoRule> vetoRules;
 
     public LoadBalancer(List<Host> initialHosts) {
@@ -92,14 +92,14 @@ public class LoadBalancer {
      * Returns a list of all known hosts. This list is a clone; modification will not affect the load balancer
      */
     public synchronized List<Host> getAllHosts() {
-        return new ArrayList<Host>(hosts);
+        return new ArrayList<>(hosts);
     }
 
     /**
      * Returns stats for all active hosts in this load balancer
      */
     public synchronized HostStats[] getHostStats() {
-        return hosts.toArray(new HostStats[hosts.size()]);
+        return hosts.toArray(new HostStats[0]);
     }
 
     /**
@@ -138,9 +138,9 @@ public class LoadBalancer {
     /**
      * Ensure this method is called sparingly as it will block getTopHost() calls, pausing all new connections!
      */
-    protected void updateHosts(List<Host> updatedHosts) throws Exception {
+    protected void updateHosts(List<Host> updatedHosts) {
         // don't modify the parameter
-        List<Host> hostList = new ArrayList<Host>(updatedHosts);
+        List<Host> hostList = new ArrayList<>(updatedHosts);
 
         // remove hosts from stored list that are not present in updated list
         // remove hosts in updated list that are already present in stored list
@@ -166,9 +166,7 @@ public class LoadBalancer {
             }
 
             // what's left in the updated list are new hosts, so add them
-            for (Host newHost : hostList) {
-                hosts.add(newHost);
-            }
+            hosts.addAll(hostList);
         }
     }
 

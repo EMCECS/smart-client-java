@@ -40,7 +40,7 @@ public final class StreamUtil {
     /**
      * Closes streams no matter what.
      */
-    public static String readAsString(InputStream inputStream) throws IOException {
+    public static String readAsString(InputStream inputStream) {
         if (inputStream == null) return null;
         try {
             return new java.util.Scanner(inputStream, "UTF-8").useDelimiter("\\A").next();
@@ -65,7 +65,7 @@ public final class StreamUtil {
 
         try {
             while (count < maxBytes) {
-                maxRead = (int) Math.min((long) buffer.length, maxBytes - count);
+                maxRead = (int) Math.min(buffer.length, maxBytes - count);
                 if (-1 == (read = is.read(buffer, 0, maxRead))) break;
                 os.write(buffer, 0, read);
                 count += read;
