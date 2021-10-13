@@ -1,0 +1,12 @@
+description = 'Smart Client core components - This library has minimal dependencies and provides the core generic logic necesary for client-side intelligent load balancing'
+
+dependencies {
+    implementation 'org.slf4j:slf4j-api:1.7.32'
+
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'log4j:log4j:1.2.17'
+}
+
+test {
+    useJUnit()
+}
