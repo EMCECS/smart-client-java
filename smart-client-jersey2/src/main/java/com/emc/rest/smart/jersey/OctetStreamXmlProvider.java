@@ -15,9 +15,9 @@
  */
 package com.emc.rest.smart.jersey;
 
-import com.sun.jersey.core.impl.provider.entity.XMLRootElementProvider;
-import com.sun.jersey.spi.inject.Injectable;
+import org.glassfish.jersey.jaxb.internal.XmlRootElementJaxbProvider;
 
+import javax.inject.Provider;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
@@ -39,8 +39,8 @@ import java.lang.reflect.Type;
 public class OctetStreamXmlProvider implements MessageBodyReader<Object> {
     private final MessageBodyReader<Object> delegate;
 
-    public OctetStreamXmlProvider(@Context Injectable<SAXParserFactory> spf, @Context Providers ps) {
-        this.delegate = new XMLRootElementProvider.General(spf, ps);
+    public OctetStreamXmlProvider(@Context Provider<SAXParserFactory> spf, @Context Providers ps) {
+        this.delegate = new XmlRootElementJaxbProvider.General(spf, ps);
     }
 
     @Override

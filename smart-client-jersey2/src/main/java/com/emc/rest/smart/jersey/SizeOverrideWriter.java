@@ -15,9 +15,9 @@
  */
 package com.emc.rest.smart.jersey;
 
-import com.sun.jersey.core.impl.provider.entity.ByteArrayProvider;
-import com.sun.jersey.core.impl.provider.entity.FileProvider;
-import com.sun.jersey.core.impl.provider.entity.InputStreamProvider;
+import org.glassfish.jersey.message.internal.ByteArrayProvider;
+import org.glassfish.jersey.message.internal.FileProvider;
+import org.glassfish.jersey.message.internal.InputStreamProvider;
 
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;

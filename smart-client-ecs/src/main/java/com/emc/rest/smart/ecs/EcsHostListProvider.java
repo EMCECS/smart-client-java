@@ -71,6 +71,7 @@ public class EcsHostListProvider implements HostListProvider {
                     log.warn("not retrieving node list from " + host.getName() + " because it's unhealthy");
                     continue;
                 }
+
                 try {
                     updateVdcNodes(vdc, getDataNodes(host));
                     success = true;
