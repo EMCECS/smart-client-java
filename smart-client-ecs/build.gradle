@@ -2,7 +2,7 @@ description = 'HostListProvider implementation for ECS'
 
 dependencies {
     api project(':smart-client-core')
-    api project(':smart-client-jersey')
+    api project(':smart-client-jersey2')
     implementation 'org.slf4j:slf4j-api:1.7.32'
     implementation 'com.sun.jersey:jersey-client:1.19.4'
     implementation 'commons-codec:commons-codec:1.15'
