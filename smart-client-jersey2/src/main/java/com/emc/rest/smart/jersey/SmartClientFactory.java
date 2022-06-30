@@ -20,6 +20,7 @@ import com.emc.rest.smart.SmartConfig;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.glassfish.jersey.apache.connector.ApacheClientProperties;
 import org.glassfish.jersey.apache.connector.ApacheConnectorProvider;
+import org.glassfish.jersey.apache.connector.ApacheHttpClientBuilderConfigurator;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.ClientProperties;
 import org.glassfish.jersey.jackson.internal.jackson.jaxrs.json.JacksonJaxbJsonProvider;
@@ -94,7 +95,13 @@ public final class SmartClientFactory {
         jsonProvider.addUntouchable(File.class);
         clientConfig.register(jsonProvider);
 
-        // build Jersey client
+        // Note, that internally the HttpUrlConnection instances are pooled, so (un)setting the property after already creating a target typically does not have any effect.
+        // The property influences all the connections created after the property has been (un)set,
+        // but there is no guarantee, that your request will use a connection created after the property change.
+        //In a simple environment, setting the property before creating the first target is sufficient,
+        // but in complex environments (such as application servers), where some poolable connections might exist before your application even bootstraps,
+        // this approach is not 100% reliable and we recommend using a different client transport connector, such as Apache Connector.
+        // These limitations have to be considered especially when invoking CORS (Cross Origin Resource Sharing) requests.
         clientConfig.connectorProvider(new ApacheConnectorProvider());
         return ClientBuilder.newClient(clientConfig);
     }
@@ -123,41 +130,43 @@ public final class SmartClientFactory {
         client.close();
     }
 
-//    static ApacheHttpClient4Handler createApacheClientHandler(SmartConfig smartConfig) {
-//        ClientConfig clientConfig = new DefaultClientConfig();
-//
-//        // set up multi-threaded connection pool
-//        // TODO: find a non-deprecated connection manager that works (swapping out with
-//        //       PoolingHttpClientConnectionManager will break threading)
-//        PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
-//        // 999 maximum active connections (max allowed)
-//        connectionManager.setDefaultMaxPerRoute(999);
-//        connectionManager.setMaxTotal(999);
-//        clientConfig.property(ApacheClientProperties.CONNECTION_MANAGER, connectionManager);
-//
-//        // set proxy config
-//        if (smartConfig.getProxyUri() != null)
-//            clientConfig.getProperties().put(ClientProperties.PROXY_URI, smartConfig.getProxyUri());
-//        if (smartConfig.getProxyUser() != null)
-//            clientConfig.getProperties().put(ClientProperties.PROXY_USERNAME, smartConfig.getProxyUser());
-//        if (smartConfig.getProxyPass() != null)
-//            clientConfig.getProperties().put(ClientProperties.PROXY_PASSWORD, smartConfig.getProxyPass());
-//
-//        // pass in jersey parameters from calling code (allows customization of client)
-//        for (String propName : smartConfig.getProperties().keySet()) {
-//            clientConfig.getProperties().put(propName, smartConfig.getProperty(propName));
-//        }
-//
-//        ApacheHttpClient4Handler handler = ApacheHttpClient4.create(clientConfig).getClientHandler();
-//
-//        // disable the retry handler if necessary
-//        if (smartConfig.getProperty(DISABLE_APACHE_RETRY) != null) {
-//            org.apache.http.impl.client.AbstractHttpClient httpClient = (org.apache.http.impl.client.AbstractHttpClient) handler.getHttpClient();
-//            httpClient.setHttpRequestRetryHandler(new org.apache.http.impl.client.DefaultHttpRequestRetryHandler(0, false));
-//        }
-//
-//        return handler;
-//    }
+    // TODO
+    static ClientConfig createApacheClientHandler(SmartConfig smartConfig) {
+        ClientConfig clientConfig = new ClientConfig();
+
+        // set up multi-threaded connection pool
+        // TODO: find a non-deprecated connection manager that works (swapping out with
+        //       PoolingHttpClientConnectionManager will break threading)
+        PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
+        // 999 maximum active connections (max allowed)
+        connectionManager.setDefaultMaxPerRoute(999);
+        connectionManager.setMaxTotal(999);
+        clientConfig.property(ApacheClientProperties.CONNECTION_MANAGER, connectionManager);
+
+        // set proxy config
+        if (smartConfig.getProxyUri() != null)
+            clientConfig.getProperties().put(ClientProperties.PROXY_URI, smartConfig.getProxyUri());
+        if (smartConfig.getProxyUser() != null)
+            clientConfig.getProperties().put(ClientProperties.PROXY_USERNAME, smartConfig.getProxyUser());
+        if (smartConfig.getProxyPass() != null)
+            clientConfig.getProperties().put(ClientProperties.PROXY_PASSWORD, smartConfig.getProxyPass());
+
+        // pass in jersey parameters from calling code (allows customization of client)
+        for (String propName : smartConfig.getProperties().keySet()) {
+            clientConfig.getProperties().put(propName, smartConfig.getProperty(propName));
+        }
+
+        // TODO
+        clientConfig.register((ApacheHttpClientBuilderConfigurator) httpClientBuilder -> null);
+
+        // disable the retry handler if necessary
+        if (smartConfig.getProperty(DISABLE_APACHE_RETRY) != null) {
+            org.apache.http.impl.client.AbstractHttpClient httpClient = (org.apache.http.impl.client.AbstractHttpClient) handler.getHttpClient();
+            httpClient.setHttpRequestRetryHandler(new org.apache.http.impl.client.DefaultHttpRequestRetryHandler(0, false));
+        }
+
+        return clientConfig;
+    }
 
     private SmartClientFactory() {
     }

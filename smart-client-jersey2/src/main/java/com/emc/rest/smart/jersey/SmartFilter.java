@@ -17,6 +17,11 @@ package com.emc.rest.smart.jersey;
 
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.SmartConfig;
+import org.apache.http.HttpHost;
+import org.apache.http.client.utils.URIUtils;
+import org.glassfish.jersey.client.InjectionManagerClientProvider;
+import org.glassfish.jersey.internal.inject.InjectionManager;
+import org.glassfish.jersey.internal.inject.Providers;
 
 import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientRequestFilter;
@@ -28,7 +33,6 @@ import java.net.URISyntaxException;
 
 public class SmartFilter implements ClientRequestFilter {
     public static final String BYPASS_LOAD_BALANCER = "com.emc.rest.smart.bypassLoadBalancer";
-
     private final SmartConfig smartConfig;
 
     public SmartFilter(SmartConfig smartConfig) {
@@ -37,10 +41,13 @@ public class SmartFilter implements ClientRequestFilter {
 
     @Override
     public void filter(ClientRequestContext context) throws IOException {
+        final InjectionManager injectionManager = InjectionManagerClientProvider.getInjectionManager(context);
         // check for bypass flag
         Boolean bypass = (Boolean) context.getProperty(BYPASS_LOAD_BALANCER);
+        Iterable<ClientRequestFilter> requestFilters = Providers.getAllProviders(injectionManager, ClientRequestFilter.class);
         if (bypass != null && bypass) {
-//            return getNext().handle(request);
+            if (requestFilters.iterator().hasNext())
+                requestFilters.iterator().next().filter(context);
         }
 
         // get highest ranked host for next request
@@ -49,9 +56,9 @@ public class SmartFilter implements ClientRequestFilter {
         // replace the host in the request
         URI uri = context.getUri();
         try {
-            org.apache.http.HttpHost httpHost = new org.apache.http.HttpHost(host.getName(), uri.getPort(), uri.getScheme());
+            HttpHost httpHost = new HttpHost(host.getName(), uri.getPort(), uri.getScheme());
             // NOTE: flags were added in httpclient 4.5.8 to allow for no normalization (which matches behavior prior to 4.5.7)
-            uri = org.apache.http.client.utils.URIUtils.rewriteURI(uri, httpHost, org.apache.http.client.utils.URIUtils.NO_FLAGS);
+            uri = URIUtils.rewriteURI(uri, httpHost, URIUtils.NO_FLAGS);
         } catch (URISyntaxException e) {
             throw new RuntimeException("load-balanced host generated invalid URI", e);
         }
@@ -60,15 +67,13 @@ public class SmartFilter implements ClientRequestFilter {
         // track requests stats for LB ranking
         host.connectionOpened(); // not really, but we can't (cleanly) intercept any lower than this
         try {
-            // call to delegate
-//            ClientResponse response = getNext().handle(request);
-
+            requestFilters.iterator().next().filter(context);
             // capture request stats
             // except for 501 (not implemented), all 50x responses are considered server errors
-//            host.callComplete(response.getStatus() >= 500 && response.getStatus() != 501);
+            host.callComplete(response.getStatus() >= 500 && response.getStatus() != 501);
 
             // wrap the input stream so we can capture the actual connection close
-//            response.setEntityStream(new WrappedInputStream(response.readEntity(EntityInputStream.class), host));
+            context.setEntityStream(new WrappedInputStream(response.getEntityInputStream(), host));
 
         } catch (RuntimeException e) {
 

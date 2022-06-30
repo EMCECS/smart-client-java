@@ -114,7 +114,7 @@ public class SmartClientTest {
         // this is an illegal use of this resource, but we just want to make sure the request is sent
         // (no exception when finding a MessageBodyWriter)
         WebTarget webTarget = client.target(endpoints[0]).path("/rest/namespace/foo");
-        Invocation.Builder invocationBuilder =  webTarget.request(MediaType.APPLICATION_JSON);
+        Invocation.Builder invocationBuilder = webTarget.request(MediaType.APPLICATION_JSON);
         Response response = invocationBuilder.post(Entity.json(data));
 
         Assert.assertTrue(response.getStatus() > 299); // some versions of ECS return 500 instead of 403
