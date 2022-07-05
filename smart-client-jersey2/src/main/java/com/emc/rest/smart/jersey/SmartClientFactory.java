@@ -17,6 +17,8 @@ package com.emc.rest.smart.jersey;
 
 import com.emc.rest.smart.PollingDaemon;
 import com.emc.rest.smart.SmartConfig;
+import org.apache.http.client.HttpRequestRetryHandler;
+import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.glassfish.jersey.apache.connector.ApacheClientProperties;
 import org.glassfish.jersey.apache.connector.ApacheConnectorProvider;
@@ -43,10 +45,14 @@ public final class SmartClientFactory {
     public static final String DISABLE_APACHE_RETRY = "com.emc.rest.smart.disableApacheRetry";
 
     public static Client createSmartClient(SmartConfig smartConfig) {
-        Client client = createStandardClient(smartConfig);
+        return createSmartClient(smartConfig, createApacheClient(smartConfig));
+    }
+
+    public static Client createSmartClient(SmartConfig smartConfig, Client client) {
+        Client smartClient = createStandardClient(smartConfig, client);
 
         // inject SmartFilter (this is the Jersey integration point of the load balancer)
-        client.register(new SmartFilter(smartConfig));
+        smartClient.register(new SmartFilter(smartConfig));
 
         // set up polling for updated host list (if polling is disabled in smartConfig or there's no host list provider,
         // nothing will happen)
@@ -54,16 +60,23 @@ public final class SmartClientFactory {
         pollingDaemon.start();
 
         // attach the daemon thread to the client so users can stop it when finished with the client
-        client.property(PollingDaemon.PROPERTY_KEY, pollingDaemon);
+        smartClient.property(PollingDaemon.PROPERTY_KEY, pollingDaemon);
 
-        return client;
+        return smartClient;
+    }
+    /**
+     * This creates a standard apache-based Jersey client, configured with a SmartConfig, but without any load balancing
+     * or node polling.
+     */
+    public static Client createStandardClient(SmartConfig smartConfig) {
+        return createStandardClient(smartConfig, createApacheClient(smartConfig));
     }
 
     /**
      * This creates a standard apache-based Jersey client, configured with a SmartConfig, but without any load balancing
      * or node polling.
      */
-    public static Client createStandardClient(SmartConfig smartConfig) {
+    public static Client createStandardClient(SmartConfig smartConfig, Client client) {
         // init Jersey config
         ClientConfig clientConfig = new ClientConfig();
 
@@ -95,15 +108,9 @@ public final class SmartClientFactory {
         jsonProvider.addUntouchable(File.class);
         clientConfig.register(jsonProvider);
 
-        // Note, that internally the HttpUrlConnection instances are pooled, so (un)setting the property after already creating a target typically does not have any effect.
-        // The property influences all the connections created after the property has been (un)set,
-        // but there is no guarantee, that your request will use a connection created after the property change.
-        //In a simple environment, setting the property before creating the first target is sufficient,
-        // but in complex environments (such as application servers), where some poolable connections might exist before your application even bootstraps,
-        // this approach is not 100% reliable and we recommend using a different client transport connector, such as Apache Connector.
-        // These limitations have to be considered especially when invoking CORS (Cross Origin Resource Sharing) requests.
-        clientConfig.connectorProvider(new ApacheConnectorProvider());
-        return ClientBuilder.newClient(clientConfig);
+        client.register(clientConfig);
+
+        return client;
     }
 
     /**
@@ -130,9 +137,9 @@ public final class SmartClientFactory {
         client.close();
     }
 
-    // TODO
-    static ClientConfig createApacheClientHandler(SmartConfig smartConfig) {
-        ClientConfig clientConfig = new ClientConfig();
+    // TODO: apache configuration
+    static Client createApacheClient(SmartConfig smartConfig) {
+        ClientConfig clientConfig = new ClientConfig().connectorProvider(new ApacheConnectorProvider());
 
         // set up multi-threaded connection pool
         // TODO: find a non-deprecated connection manager that works (swapping out with
@@ -145,27 +152,25 @@ public final class SmartClientFactory {
 
         // set proxy config
         if (smartConfig.getProxyUri() != null)
-            clientConfig.getProperties().put(ClientProperties.PROXY_URI, smartConfig.getProxyUri());
+            clientConfig.property(ClientProperties.PROXY_URI, smartConfig.getProxyUri());
         if (smartConfig.getProxyUser() != null)
-            clientConfig.getProperties().put(ClientProperties.PROXY_USERNAME, smartConfig.getProxyUser());
+            clientConfig.property(ClientProperties.PROXY_USERNAME, smartConfig.getProxyUser());
         if (smartConfig.getProxyPass() != null)
-            clientConfig.getProperties().put(ClientProperties.PROXY_PASSWORD, smartConfig.getProxyPass());
+            clientConfig.property(ClientProperties.PROXY_PASSWORD, smartConfig.getProxyPass());
 
         // pass in jersey parameters from calling code (allows customization of client)
         for (String propName : smartConfig.getProperties().keySet()) {
-            clientConfig.getProperties().put(propName, smartConfig.getProperty(propName));
+            clientConfig.property(propName, smartConfig.getProperty(propName));
         }
-
-        // TODO
-        clientConfig.register((ApacheHttpClientBuilderConfigurator) httpClientBuilder -> null);
 
         // disable the retry handler if necessary
         if (smartConfig.getProperty(DISABLE_APACHE_RETRY) != null) {
-            org.apache.http.impl.client.AbstractHttpClient httpClient = (org.apache.http.impl.client.AbstractHttpClient) handler.getHttpClient();
-            httpClient.setHttpRequestRetryHandler(new org.apache.http.impl.client.DefaultHttpRequestRetryHandler(0, false));
+            clientConfig.property(ApacheClientProperties.RETRY_HANDLER, new DefaultHttpRequestRetryHandler(0 ,false));
         }
 
-        return clientConfig;
+        Client apacheClient = ClientBuilder.newClient(clientConfig);
+
+        return apacheClient;
     }
 
     private SmartClientFactory() {
