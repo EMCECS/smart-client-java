@@ -130,7 +130,7 @@ public final class SmartClientFactory {
         client.close();
     }
 
-    // TODO
+    // TODO: apache configuration
     static ClientConfig createApacheClientHandler(SmartConfig smartConfig) {
         ClientConfig clientConfig = new ClientConfig();
 
@@ -160,10 +160,10 @@ public final class SmartClientFactory {
         clientConfig.register((ApacheHttpClientBuilderConfigurator) httpClientBuilder -> null);
 
         // disable the retry handler if necessary
-        if (smartConfig.getProperty(DISABLE_APACHE_RETRY) != null) {
-            org.apache.http.impl.client.AbstractHttpClient httpClient = (org.apache.http.impl.client.AbstractHttpClient) handler.getHttpClient();
-            httpClient.setHttpRequestRetryHandler(new org.apache.http.impl.client.DefaultHttpRequestRetryHandler(0, false));
-        }
+//        if (smartConfig.getProperty(DISABLE_APACHE_RETRY) != null) {
+//            org.apache.http.impl.client.AbstractHttpClient httpClient = (org.apache.http.impl.client.AbstractHttpClient) handler.getHttpClient();
+//            httpClient.setHttpRequestRetryHandler(new org.apache.http.impl.client.DefaultHttpRequestRetryHandler(0, false));
+//        }
 
         return clientConfig;
     }
