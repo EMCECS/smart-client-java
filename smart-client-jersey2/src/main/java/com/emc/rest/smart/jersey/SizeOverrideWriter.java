@@ -31,6 +31,11 @@ import java.lang.reflect.Type;
 
 public class SizeOverrideWriter<T> implements MessageBodyWriter<T> {
     private static final ThreadLocal<Long> entitySize = new ThreadLocal<>();
+    private final MessageBodyWriter<T> delegate;
+
+    public SizeOverrideWriter(MessageBodyWriter<T> delegate) {
+        this.delegate = delegate;
+    }
 
     public static Long getEntitySize() {
         return entitySize.get();
@@ -38,12 +43,6 @@ public class SizeOverrideWriter<T> implements MessageBodyWriter<T> {
 
     public static void setEntitySize(Long size) {
         entitySize.set(size);
-    }
-
-    private final MessageBodyWriter<T> delegate;
-
-    public SizeOverrideWriter(MessageBodyWriter<T> delegate) {
-        this.delegate = delegate;
     }
 
     @Override

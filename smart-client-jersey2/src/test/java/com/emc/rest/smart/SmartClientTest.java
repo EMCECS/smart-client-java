@@ -44,12 +44,10 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class SmartClientTest {
-    private static final Logger l4j = LogManager.getLogger(SmartClientTest.class);
-
     public static final String PROP_ATMOS_ENDPOINTS = "atmos.endpoints";
     public static final String PROP_ATMOS_UID = "atmos.uid";
     public static final String PROP_ATMOS_SECRET = "atmos.secret";
-
+    private static final Logger l4j = LogManager.getLogger(SmartClientTest.class);
     private static final String HEADER_FORMAT = "EEE, d MMM yyyy HH:mm:ss z";
     private static final ThreadLocal<DateFormat> headerFormat = new ThreadLocal<>();
 
