@@ -83,7 +83,7 @@ public final class SmartClientFactory {
 
         // pass in jersey parameters from calling code (allows customization of client)
         for (String propName : smartConfig.getProperties().keySet()) {
-            clientConfig.getProperties().put(propName, smartConfig.getProperty(propName));
+            clientConfig.property(propName, smartConfig.getProperty(propName));
         }
 
         // replace sized writers with override writers to allow dynamic content-length (i.e. for transformations)

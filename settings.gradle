@@ -2,4 +2,3 @@ rootProject.name = 'smart-client'
 include 'smart-client-core'
 include 'smart-client-jersey2'
 include 'smart-client-ecs'
-

@@ -26,13 +26,15 @@ import org.glassfish.jersey.internal.inject.Providers;
 import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientRequestFilter;
 import javax.ws.rs.client.ClientResponseContext;
+import javax.ws.rs.client.ClientResponseFilter;
+import javax.ws.rs.container.ContainerRequestFilter;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-public class SmartFilter implements ClientRequestFilter {
+public class SmartFilter implements ClientResponseFilter {
     public static final String BYPASS_LOAD_BALANCER = "com.emc.rest.smart.bypassLoadBalancer";
     private final SmartConfig smartConfig;
 
