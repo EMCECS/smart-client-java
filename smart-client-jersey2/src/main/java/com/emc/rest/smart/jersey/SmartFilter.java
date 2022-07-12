@@ -27,7 +27,6 @@ import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientRequestFilter;
 import javax.ws.rs.client.ClientResponseContext;
 import javax.ws.rs.client.ClientResponseFilter;
-import javax.ws.rs.container.ContainerRequestFilter;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -44,7 +43,7 @@ public class SmartFilter implements ClientResponseFilter {
 
     @Override
     public void filter(ClientRequestContext requestContext, ClientResponseContext responseContext) throws IOException {
-        final InjectionManager injectionManager = InjectionManagerClientProvider.getInjectionManager(context);
+        final InjectionManager injectionManager = InjectionManagerClientProvider.getInjectionManager(requestContext);
         // check for bypass flag
         Boolean bypass = (Boolean) requestContext.getProperty(BYPASS_LOAD_BALANCER);
         Iterable<ClientRequestFilter> requestFilters = Providers.getAllProviders(injectionManager, ClientRequestFilter.class);
