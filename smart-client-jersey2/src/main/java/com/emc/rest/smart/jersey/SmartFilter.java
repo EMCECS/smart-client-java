@@ -25,6 +25,7 @@ import org.glassfish.jersey.internal.inject.Providers;
 
 import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientRequestFilter;
+import javax.ws.rs.client.ClientResponseContext;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -40,21 +41,21 @@ public class SmartFilter implements ClientRequestFilter {
     }
 
     @Override
-    public void filter(ClientRequestContext context) throws IOException {
+    public void filter(ClientRequestContext requestContext, ClientResponseContext responseContext) throws IOException {
         final InjectionManager injectionManager = InjectionManagerClientProvider.getInjectionManager(context);
         // check for bypass flag
-        Boolean bypass = (Boolean) context.getProperty(BYPASS_LOAD_BALANCER);
+        Boolean bypass = (Boolean) requestContext.getProperty(BYPASS_LOAD_BALANCER);
         Iterable<ClientRequestFilter> requestFilters = Providers.getAllProviders(injectionManager, ClientRequestFilter.class);
         if (bypass != null && bypass) {
             if (requestFilters.iterator().hasNext())
-                requestFilters.iterator().next().filter(context);
+                requestFilters.iterator().next().filter(requestContext);
         }
 
         // get highest ranked host for next request
-        Host host = smartConfig.getLoadBalancer().getTopHost(context.getConfiguration().getProperties());
+        Host host = smartConfig.getLoadBalancer().getTopHost(requestContext.getConfiguration().getProperties());
 
         // replace the host in the request
-        URI uri = context.getUri();
+        URI uri = requestContext.getUri();
         try {
             HttpHost httpHost = new HttpHost(host.getName(), uri.getPort(), uri.getScheme());
             // NOTE: flags were added in httpclient 4.5.8 to allow for no normalization (which matches behavior prior to 4.5.7)
@@ -62,20 +63,19 @@ public class SmartFilter implements ClientRequestFilter {
         } catch (URISyntaxException e) {
             throw new RuntimeException("load-balanced host generated invalid URI", e);
         }
-        context.setUri(uri);
+        requestContext.setUri(uri);
 
         // track requests stats for LB ranking
         host.connectionOpened(); // not really, but we can't (cleanly) intercept any lower than this
         try {
-            requestFilters.iterator().next().filter(context);
+            requestFilters.iterator().next().filter(requestContext);
+
             // capture request stats
             // except for 501 (not implemented), all 50x responses are considered server errors
-
-            //TODO: wrap response entity
-//            host.callComplete(response.getStatus() >= 500 && response.getStatus() != 501);
+            host.callComplete(responseContext.getStatus() >= 500 && responseContext.getStatus() != 501);
 //
 //            // wrap the input stream so we can capture the actual connection close
-//            context.setEntityStream(new WrappedInputStream(response.getEntityInputStream(), host));
+            responseContext.setEntityStream(new WrappedInputStream(responseContext.getEntityStream(), host));
 
         } catch (RuntimeException e) {
 
