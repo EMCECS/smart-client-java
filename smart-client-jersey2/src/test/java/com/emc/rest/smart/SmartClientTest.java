@@ -15,14 +15,20 @@
  */
 package com.emc.rest.smart;
 
+import com.emc.rest.smart.jersey.SizeOverrideWriter;
 import com.emc.rest.smart.jersey.SmartClientFactory;
 import com.emc.util.TestConfig;
+import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
+import javax.ws.rs.ProcessingException;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.http.conn.ConnectTimeoutException;
 import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.glassfish.jersey.client.ClientProperties;
+import org.glassfish.jersey.client.ClientResponse;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
@@ -35,6 +41,7 @@ import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
@@ -122,25 +129,22 @@ public class SmartClientTest {
     public void testConnTimeout() throws Exception {
         int CONNECTION_TIMEOUT_MILLIS = 10000; // 10 seconds
 
-        HttpParams httpParams = new BasicHttpParams();
-        HttpConnectionParams.setConnectionTimeout(httpParams, CONNECTION_TIMEOUT_MILLIS);
-
         SmartConfig smartConfig = new SmartConfig("8.8.4.4:9020");
-//        smartConfig.setProperty(ApacheHttpClient4Config.PROPERTY_HTTP_PARAMS, httpParams);
 
         final Client client = SmartClientFactory.createStandardClient(smartConfig);
+        client.property(ClientProperties.CONNECT_TIMEOUT, CONNECTION_TIMEOUT_MILLIS);
 
         Future<?> future = Executors.newSingleThreadExecutor().submit(() -> {
-            client.target("http://8.8.4.4:9020/?ping").request().get(String.class);
+            client.target("http://8.8.4.4:9020").path("/?ping").request().get(String.class);
             Assert.fail("response was not expected; choose an IP that is not in use");
         });
 
         try {
-            future.get(CONNECTION_TIMEOUT_MILLIS + 1000, TimeUnit.MILLISECONDS); // give an extra second leeway
+            future.get(CONNECTION_TIMEOUT_MILLIS + 10000, TimeUnit.MILLISECONDS); // give an extra second leeway
         } catch (TimeoutException e) {
             Assert.fail("connection did not timeout");
         } catch (ExecutionException e) {
-//            Assert.assertTrue(e.getCause() instanceof ClientHandlerException);
+            Assert.assertTrue(e.getCause() instanceof ProcessingException);
             Assert.assertTrue(e.getMessage().contains("timed out"));
         }
     }
@@ -152,7 +156,7 @@ public class SmartClientTest {
         String signature = sign("GET\n\n\n" + date + "\n" + path + "\nx-emc-date:" + date + "\nx-emc-uid:" + uid, secretKey);
 
         WebTarget webTarget = client.target(serverUri).path(path);
-        Invocation invocation = webTarget.request("text/plain")
+        Invocation invocation = webTarget.request("application/xml")
                 .header("Date", date)
                 .header("x-emc-date", date)
                 .header("x-emc-uid", uid)
@@ -163,7 +167,7 @@ public class SmartClientTest {
 
         if (response.getStatus() > 299) throw new RuntimeException("error response: " + response.getStatus());
 
-        String responseStr = (String) response.getEntity();
+        String responseStr = (String)response.getEntity();
         if (!responseStr.contains("Atmos")) throw new RuntimeException("unrecognized response string: " + responseStr);
     }
 

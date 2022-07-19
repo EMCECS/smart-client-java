@@ -69,7 +69,8 @@ public class SmartFilter implements ClientResponseFilter {
         // track requests stats for LB ranking
         host.connectionOpened(); // not really, but we can't (cleanly) intercept any lower than this
         try {
-            requestFilters.iterator().next().filter(requestContext);
+            if (requestFilters.iterator().hasNext())
+                requestFilters.iterator().next().filter(requestContext);
 
             // capture request stats
             // except for 501 (not implemented), all 50x responses are considered server errors

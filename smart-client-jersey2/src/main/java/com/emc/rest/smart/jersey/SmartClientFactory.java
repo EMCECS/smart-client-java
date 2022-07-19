@@ -87,19 +87,16 @@ public final class SmartClientFactory {
         }
 
         // replace sized writers with override writers to allow dynamic content-length (i.e. for transformations)
-        clientConfig.getClasses().remove(ByteArrayProvider.class);
-        clientConfig.getClasses().remove(FileProvider.class);
-        clientConfig.getClasses().remove(InputStreamProvider.class);
-        clientConfig.getClasses().add(SizeOverrideWriter.ByteArray.class);
-        clientConfig.getClasses().add(SizeOverrideWriter.File.class);
-        clientConfig.getClasses().add(SizeOverrideWriter.SizedInputStream.class);
-        clientConfig.getClasses().add(SizeOverrideWriter.InputStream.class);
-        clientConfig.getClasses().add(ByteArrayProvider.class);
-        clientConfig.getClasses().add(FileProvider.class);
-        clientConfig.getClasses().add(InputStreamProvider.class);
+        clientConfig.register(SizeOverrideWriter.ByteArray.class);
+        clientConfig.register(SizeOverrideWriter.File.class);
+        clientConfig.register(SizeOverrideWriter.SizedInputStream.class);
+        clientConfig.register(SizeOverrideWriter.InputStream.class);
+        clientConfig.register(ByteArrayProvider.class);
+        clientConfig.register(FileProvider.class);
+        clientConfig.register(InputStreamProvider.class);
 
         // add support for XML with no content-type
-        clientConfig.getClasses().add(OctetStreamXmlProvider.class);
+        clientConfig.register(OctetStreamXmlProvider.class);
 
         // add JSON support (using Jackson's ObjectMapper instead of JAXB marshalling)
         JacksonJaxbJsonProvider jsonProvider = new JacksonJaxbJsonProvider();
