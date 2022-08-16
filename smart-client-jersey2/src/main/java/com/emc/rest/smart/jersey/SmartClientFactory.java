@@ -165,8 +165,6 @@ public final class SmartClientFactory {
             clientConfig.property(ApacheClientProperties.RETRY_HANDLER, new DefaultHttpRequestRetryHandler(0, false));
         }
 
-        Client apacheClient = ClientBuilder.newClient(clientConfig);
-
-        return apacheClient;
+        return ClientBuilder.newClient(clientConfig);
     }
 }

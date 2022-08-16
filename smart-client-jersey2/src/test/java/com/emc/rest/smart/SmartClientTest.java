@@ -15,20 +15,13 @@
  */
 package com.emc.rest.smart;
 
-import com.emc.rest.smart.jersey.SizeOverrideWriter;
 import com.emc.rest.smart.jersey.SmartClientFactory;
 import com.emc.util.TestConfig;
-import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
 import javax.ws.rs.ProcessingException;
 import org.apache.commons.codec.binary.Base64;
-import org.apache.http.conn.ConnectTimeoutException;
-import org.apache.http.params.BasicHttpParams;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.params.HttpParams;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.glassfish.jersey.client.ClientProperties;
-import org.glassfish.jersey.client.ClientResponse;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
@@ -41,7 +34,6 @@ import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;

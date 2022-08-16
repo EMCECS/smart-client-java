@@ -18,14 +18,15 @@ package com.emc.rest.smart.ecs;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.HostListProvider;
 import com.emc.rest.smart.LoadBalancer;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.WebResource;
 import org.apache.commons.codec.binary.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.Invocation;
+import javax.ws.rs.client.WebTarget;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
@@ -91,10 +92,12 @@ public class EcsHostListProvider implements HostListProvider {
     @Override
     public void runHealthCheck(Host host) {
         // header is workaround for STORAGE-1833
-        PingResponse response = client.resource(getRequestUri(host, "/?ping"))
+        WebTarget webTarget = client.target(getRequestUri(host, "/?ping"));
+        Invocation invocation = webTarget.request()
                 .header("x-emc-namespace", "x")
                 .header("Connection", "close") // make sure maintenance calls are not kept alive
-                .get(PingResponse.class);
+                .buildGet();
+        PingResponse response = invocation.invoke(PingResponse.class);
 
         if (host instanceof VdcHost) {
             PingItem.Status status = PingItem.Status.OFF;
@@ -108,7 +111,7 @@ public class EcsHostListProvider implements HostListProvider {
 
     @Override
     public void destroy() {
-        client.destroy();
+        client.close();
     }
 
     protected List<Host> getDataNodes(Host host) {
@@ -131,17 +134,16 @@ public class EcsHostListProvider implements HostListProvider {
         }
 
         // construct request
-        WebResource.Builder request = client.resource(uri).getRequestBuilder();
-
-        // add date and auth headers
-        request.header("Date", rfcDate);
-        request.header("Authorization", "AWS " + user + ":" + signature);
-        // make sure maintenance calls are not kept alive
-        request.header("Connection", "close");
+        WebTarget webTarget = client.target(uri);
+        Invocation invocation = webTarget.request()
+                .header("Date", rfcDate) // add date and auth headers
+                .header("Authorization", "AWS " + user + ":" + signature)
+                .header("Connection", "close") // make sure maintenance calls are not kept alive
+                .buildGet();
 
         // make REST call
         log.debug("retrieving VDC node list from {}", host.getName());
-        List<String> dataNodes = request.get(ListDataNode.class).getDataNodes();
+        List<String> dataNodes = invocation.invoke(ListDataNode.class).getDataNodes();
 
         List<Host> hosts = new ArrayList<>();
         for (String node : dataNodes) {
