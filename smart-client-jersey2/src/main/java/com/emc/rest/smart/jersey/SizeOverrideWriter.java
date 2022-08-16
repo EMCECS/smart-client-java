@@ -54,7 +54,6 @@ public class SizeOverrideWriter<T> implements MessageBodyWriter<T> {
     public long getSize(T t, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
         Long size = entitySize.get();
         if (size != null) {
-            entitySize.remove();
             return size;
         }
         return delegate.getSize(t, type, genericType, annotations, mediaType);

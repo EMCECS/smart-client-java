@@ -19,10 +19,10 @@ plugins {
     id 'idea'
     id 'eclipse'
     id 'java'
-    id 'net.saliman.cobertura' version '3.0.0' apply false
-    id 'com.github.jk1.dependency-license-report' version '1.14' apply false
-//    id 'org.ajoberstar.git-publish' version '3.0.0'
-    id 'nebula.release' version '15.2.0'
+    id 'net.saliman.cobertura' version '4.0.0' apply false
+    id 'com.github.jk1.dependency-license-report' version '1.17' apply false
+    id 'org.ajoberstar.git-publish' version '3.0.1'
+    id 'nebula.release' version '15.3.1'
 }
 
 // name of the github project repository
@@ -60,10 +60,7 @@ subprojects {
 
     [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
-    compileJava {
-        sourceCompatibility = 1.8
-        targetCompatibility = 1.8
-    }
+    sourceCompatibility = 1.8
 
     def projectPom = {
         project {

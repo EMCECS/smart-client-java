@@ -6,6 +6,8 @@ dependencies {
     implementation 'org.slf4j:slf4j-api:1.7.36'
     implementation 'org.glassfish.jersey.core:jersey-client:2.36'
     implementation 'commons-codec:commons-codec:1.15'
+    // jaxb was removed from Java 11 - jaxb dependencies are provided with Java 8
+    implementation "javax.xml.bind:jaxb-api:2.3.1"
 
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'log4j:log4j:1.2.17'
