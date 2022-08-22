@@ -2,6 +2,8 @@ package com.emc.rest.smart;
 
 public class SmartClientException extends RuntimeException {
 
+    private ErrorType errorType = ErrorType.Unknown;
+
     public SmartClientException(String message) {
         super(message);
     }
@@ -9,13 +11,6 @@ public class SmartClientException extends RuntimeException {
     public SmartClientException(String message, Throwable cause) {
         super(message, cause);
     }
-
-    public enum ErrorType {
-        Client, // 4xx
-        Service, // 5xx
-        Unknown
-    }
-
     public ErrorType getErrorType() {
         return errorType;
     }
@@ -24,6 +19,14 @@ public class SmartClientException extends RuntimeException {
         this.errorType = errorType;
     }
 
-    private ErrorType errorType = ErrorType.Unknown;
+    public enum ErrorType {
+        Client, // 4xx
+        Service, // 5xx
+        Unknown
+    }
+
+    public boolean isServerError() {
+        return this.getErrorType().equals(SmartClientException.ErrorType.Service);
+    }
 
 }

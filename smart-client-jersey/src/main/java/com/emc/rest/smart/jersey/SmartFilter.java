@@ -75,12 +75,10 @@ public class SmartFilter extends ClientFilter {
 
             return response;
         } catch (RuntimeException e) {
-
-            if (e instanceof SmartClientException && !((SmartClientException)e).getErrorType().equals(SmartClientException.ErrorType.Client)) {
-                // capture requests stats (error)
-                host.callComplete(true);
-                host.connectionClosed();
-            }
+            // capture requests stats (error)
+            boolean isServerError = e instanceof SmartClientException && ((SmartClientException) e).isServerError();
+            host.callComplete(isServerError);
+            host.connectionClosed();
 
             throw e;
         }
