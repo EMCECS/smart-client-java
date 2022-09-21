@@ -19,14 +19,14 @@ public class SmartClientException extends RuntimeException {
         this.errorType = errorType;
     }
 
+    public boolean isServerError() {
+        return this.getErrorType().equals(SmartClientException.ErrorType.Service);
+    }
+    
     public enum ErrorType {
         Client, // 4xx
         Service, // 5xx
         Unknown
-    }
-
-    public boolean isServerError() {
-        return this.getErrorType().equals(SmartClientException.ErrorType.Service);
     }
 
 }
