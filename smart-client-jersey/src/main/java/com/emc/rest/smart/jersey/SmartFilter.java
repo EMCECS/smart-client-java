@@ -16,6 +16,7 @@
 package com.emc.rest.smart.jersey;
 
 import com.emc.rest.smart.Host;
+import com.emc.rest.smart.SmartClientException;
 import com.emc.rest.smart.SmartConfig;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientRequest;
@@ -74,9 +75,9 @@ public class SmartFilter extends ClientFilter {
 
             return response;
         } catch (RuntimeException e) {
-
             // capture requests stats (error)
-            host.callComplete(true);
+            boolean isServerError = e instanceof SmartClientException && ((SmartClientException) e).isServerError();
+            host.callComplete(isServerError);
             host.connectionClosed();
 
             throw e;
