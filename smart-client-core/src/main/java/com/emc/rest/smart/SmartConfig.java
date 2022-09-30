@@ -15,6 +15,9 @@
  */
 package com.emc.rest.smart;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,6 +28,9 @@ import java.util.Map;
  * Houses configuration for the smart client.
  */
 public class SmartConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(SmartConfig.class);
+
     public static final int DEFAULT_POLL_INTERVAL = 120; // seconds
 
     private URI proxyUri;
@@ -130,6 +136,18 @@ public class SmartConfig {
 
     public Object getProperty(String propName) {
         return properties.get(propName);
+    }
+
+    public Integer getIntProperty(String propName, int defaultValue) {
+        int ret;
+        String pValue = (String)properties.get(propName);
+        try {
+            ret = Integer.parseInt(pValue);
+        } catch (Throwable t) {
+            log.debug("cannot parse the config value for " + propName, t);
+            return defaultValue;
+        }
+        return ret;
     }
 
     /**
