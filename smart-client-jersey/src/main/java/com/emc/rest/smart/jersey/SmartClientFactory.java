@@ -38,6 +38,10 @@ public final class SmartClientFactory {
     private static final Logger log = LoggerFactory.getLogger(SmartClientFactory.class);
 
     public static final String DISABLE_APACHE_RETRY = "com.emc.rest.smart.disableApacheRetry";
+    public static final String MAX_CONNECTIONS = "com.emc.rest.smart.apacheMaxConnections";
+    public static final String MAX_CONNECTIONS_PER_HOST = "com.emc.rest.smart.apacheMaxConnectionsPerHost";
+    public static final int MAX_CONNECTIONS_DEFAULT = 999;
+    public static final int MAX_CONNECTIONS_PER_HOST_DEFAULT = 999;
 
     public static Client createSmartClient(SmartConfig smartConfig) {
         return createSmartClient(smartConfig, createApacheClientHandler(smartConfig));
@@ -142,8 +146,8 @@ public final class SmartClientFactory {
         //       PoolingHttpClientConnectionManager will break threading)
         org.apache.http.impl.conn.PoolingClientConnectionManager connectionManager = new org.apache.http.impl.conn.PoolingClientConnectionManager();
         // 999 maximum active connections (max allowed)
-        connectionManager.setDefaultMaxPerRoute(999);
-        connectionManager.setMaxTotal(999);
+        connectionManager.setDefaultMaxPerRoute(smartConfig.getIntProperty(MAX_CONNECTIONS_PER_HOST, MAX_CONNECTIONS_PER_HOST_DEFAULT));
+        connectionManager.setMaxTotal(smartConfig.getIntProperty(MAX_CONNECTIONS, MAX_CONNECTIONS_DEFAULT));
         clientConfig.getProperties().put(ApacheHttpClient4Config.PROPERTY_CONNECTION_MANAGER, connectionManager);
 
         // set proxy config
