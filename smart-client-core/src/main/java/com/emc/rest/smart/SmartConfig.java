@@ -42,6 +42,7 @@ public class SmartConfig {
     private int pollInterval = DEFAULT_POLL_INTERVAL;
     private boolean hostUpdateEnabled = true;
     private boolean healthCheckEnabled = true;
+    private int maxConnectionIdleTime = 0;
 
     private final Map<String, Object> properties = new HashMap<>();
 
@@ -130,6 +131,14 @@ public class SmartConfig {
         this.healthCheckEnabled = healthCheckEnabled;
     }
 
+    public int getMaxConnectionIdleTime() {
+        return maxConnectionIdleTime;
+    }
+
+    public void setMaxConnectionIdleTime(int maxConnectionIdleTime) {
+        this.maxConnectionIdleTime = maxConnectionIdleTime;
+    }
+
     public Map<String, Object> getProperties() {
         return properties;
     }
@@ -192,8 +201,14 @@ public class SmartConfig {
         return this;
     }
 
+    public SmartConfig withMaxConnectionIdleTime(int maxConnectionIdleTime) {
+        setMaxConnectionIdleTime(maxConnectionIdleTime);
+        return this;
+    }
+
     public SmartConfig withProperty(String propName, Object value) {
         setProperty(propName, value);
         return this;
     }
+
 }

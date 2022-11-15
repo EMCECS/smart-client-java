@@ -46,9 +46,7 @@ public final class SmartClientFactory {
     public static final int MAX_CONNECTIONS_DEFAULT = 999;
     public static final int MAX_CONNECTIONS_PER_HOST_DEFAULT = 999;
 
-    public static final String MAX_CONNECTION_IDLE_TIME = "com.emc.rest.smart.apacheMaxConnectionIdleTime";
-    public static final int MAX_CONNECTION_IDLE_TIME_DEFAULT = 0;
-    public static final String IDLE_CONNECTIONS_CLOSE_PROPERTY_KEY = "com.emc.rest.smart.idleConnectionsExecSvc";
+    public static final String IDLE_CONNECTION_MONITOR_PROPERTY_KEY = "com.emc.rest.smart.idleConnectionsExecSvc";
 
     public static Client createSmartClient(SmartConfig smartConfig) {
         return createSmartClient(smartConfig, createApacheClientHandler(smartConfig));
@@ -142,9 +140,9 @@ public final class SmartClientFactory {
             }
         }
 
-        ScheduledExecutorService sched = (ScheduledExecutorService)client.getProperties().get(IDLE_CONNECTIONS_CLOSE_PROPERTY_KEY);
+        ScheduledExecutorService sched = (ScheduledExecutorService)client.getProperties().get(IDLE_CONNECTION_MONITOR_PROPERTY_KEY);
         if (sched != null) {
-            log.debug("shutting down scheduled closing idle connections task");
+            log.debug("shutting down scheduled idle connections monitoring task");
             sched.shutdownNow();
         }
 
@@ -164,11 +162,13 @@ public final class SmartClientFactory {
         connectionManager.setMaxTotal(smartConfig.getIntProperty(MAX_CONNECTIONS, MAX_CONNECTIONS_DEFAULT));
         clientConfig.getProperties().put(ApacheHttpClient4Config.PROPERTY_CONNECTION_MANAGER, connectionManager);
 
-        ScheduledExecutorService sched = Executors.newSingleThreadScheduledExecutor();
-        sched.scheduleWithFixedDelay(() -> {
-            connectionManager.closeIdleConnections(smartConfig.getIntProperty(MAX_CONNECTION_IDLE_TIME, MAX_CONNECTION_IDLE_TIME_DEFAULT), TimeUnit.SECONDS);
-        }, 0, 60, TimeUnit.SECONDS);
-        smartConfig.getProperties().put(IDLE_CONNECTIONS_CLOSE_PROPERTY_KEY, sched);
+        if (smartConfig.getMaxConnectionIdleTime() > 0) {
+            ScheduledExecutorService sched = Executors.newSingleThreadScheduledExecutor();
+            sched.scheduleWithFixedDelay(() -> {
+                connectionManager.closeIdleConnections(smartConfig.getMaxConnectionIdleTime(), TimeUnit.SECONDS);
+            }, 0, 60, TimeUnit.SECONDS);
+            smartConfig.getProperties().put(IDLE_CONNECTION_MONITOR_PROPERTY_KEY, sched);
+        }
 
         // set proxy config
         if (smartConfig.getProxyUri() != null)
