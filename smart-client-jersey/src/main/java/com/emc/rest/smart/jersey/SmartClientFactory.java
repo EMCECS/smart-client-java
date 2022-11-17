@@ -32,6 +32,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public final class SmartClientFactory {
 
@@ -42,6 +45,8 @@ public final class SmartClientFactory {
     public static final String MAX_CONNECTIONS_PER_HOST = "com.emc.rest.smart.apacheMaxConnectionsPerHost";
     public static final int MAX_CONNECTIONS_DEFAULT = 999;
     public static final int MAX_CONNECTIONS_PER_HOST_DEFAULT = 999;
+
+    public static final String IDLE_CONNECTION_MONITOR_PROPERTY_KEY = "com.emc.rest.smart.idleConnectionsExecSvc";
 
     public static Client createSmartClient(SmartConfig smartConfig) {
         return createSmartClient(smartConfig, createApacheClientHandler(smartConfig));
@@ -134,6 +139,13 @@ public final class SmartClientFactory {
                 pollingDaemon.getSmartConfig().getHostListProvider().destroy();
             }
         }
+
+        ScheduledExecutorService sched = (ScheduledExecutorService)client.getProperties().get(IDLE_CONNECTION_MONITOR_PROPERTY_KEY);
+        if (sched != null) {
+            log.debug("shutting down scheduled idle connections monitoring task");
+            sched.shutdownNow();
+        }
+
         log.debug("destroying Jersey client");
         client.destroy();
     }
@@ -149,6 +161,14 @@ public final class SmartClientFactory {
         connectionManager.setDefaultMaxPerRoute(smartConfig.getIntProperty(MAX_CONNECTIONS_PER_HOST, MAX_CONNECTIONS_PER_HOST_DEFAULT));
         connectionManager.setMaxTotal(smartConfig.getIntProperty(MAX_CONNECTIONS, MAX_CONNECTIONS_DEFAULT));
         clientConfig.getProperties().put(ApacheHttpClient4Config.PROPERTY_CONNECTION_MANAGER, connectionManager);
+
+        if (smartConfig.getMaxConnectionIdleTime() > 0) {
+            ScheduledExecutorService sched = Executors.newSingleThreadScheduledExecutor();
+            sched.scheduleWithFixedDelay(() -> {
+                connectionManager.closeIdleConnections(smartConfig.getMaxConnectionIdleTime(), TimeUnit.SECONDS);
+            }, 0, 60, TimeUnit.SECONDS);
+            smartConfig.getProperties().put(IDLE_CONNECTION_MONITOR_PROPERTY_KEY, sched);
+        }
 
         // set proxy config
         if (smartConfig.getProxyUri() != null)
