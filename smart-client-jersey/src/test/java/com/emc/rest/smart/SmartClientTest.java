@@ -17,23 +17,23 @@ package com.emc.rest.smart;
 
 import com.emc.rest.smart.jersey.SmartClientFactory;
 import com.emc.util.TestConfig;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
+import javax.ws.rs.ProcessingException;
 import org.apache.commons.codec.binary.Base64;
-import org.apache.http.params.BasicHttpParams;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.params.HttpParams;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.glassfish.jersey.client.ClientProperties;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import java.io.ByteArrayInputStream;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.Invocation;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
@@ -43,7 +43,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class SmartClientTest {
-    private static final Logger l4j = Logger.getLogger(SmartClientTest.class);
+    private static final Logger l4j = LogManager.getLogger(SmartClientTest.class);
 
     public static final String PROP_ATMOS_ENDPOINTS = "atmos.endpoints";
     public static final String PROP_ATMOS_UID = "atmos.uid";
@@ -112,8 +112,9 @@ public class SmartClientTest {
 
         // this is an illegal use of this resource, but we just want to make sure the request is sent
         // (no exception when finding a MessageBodyWriter)
-        ClientResponse response = client.resource(endpoints[0]).path("/rest/namespace/foo").type("application/json")
-                 .post(ClientResponse.class, new ByteArrayInputStream(data));
+        WebTarget webTarget = client.target(endpoints[0]).path("/rest/namespace/foo");
+        Invocation.Builder invocationBuilder = webTarget.request(MediaType.APPLICATION_JSON);
+        Response response = invocationBuilder.post(Entity.json(data));
 
         Assert.assertTrue(response.getStatus() > 299); // some versions of ECS return 500 instead of 403
     }
@@ -122,16 +123,13 @@ public class SmartClientTest {
     public void testConnTimeout() throws Exception {
         int CONNECTION_TIMEOUT_MILLIS = 10000; // 10 seconds
 
-        HttpParams httpParams = new BasicHttpParams();
-        HttpConnectionParams.setConnectionTimeout(httpParams, CONNECTION_TIMEOUT_MILLIS);
-
         SmartConfig smartConfig = new SmartConfig("8.8.4.4:9020");
-        smartConfig.setProperty(ApacheHttpClient4Config.PROPERTY_HTTP_PARAMS, httpParams);
 
         final Client client = SmartClientFactory.createStandardClient(smartConfig);
+        client.property(ClientProperties.CONNECT_TIMEOUT, CONNECTION_TIMEOUT_MILLIS);
 
         Future<?> future = Executors.newSingleThreadExecutor().submit(() -> {
-            client.resource("http://8.8.4.4:9020/?ping").get(String.class);
+            client.target("http://8.8.4.4:9020").path("/?ping").request().get(String.class);
             Assert.fail("response was not expected; choose an IP that is not in use");
         });
 
@@ -140,7 +138,7 @@ public class SmartClientTest {
         } catch (TimeoutException e) {
             Assert.fail("connection did not timeout");
         } catch (ExecutionException e) {
-            Assert.assertTrue(e.getCause() instanceof ClientHandlerException);
+            Assert.assertTrue(e.getCause() instanceof ProcessingException);
             Assert.assertTrue(e.getMessage().contains("timed out"));
         }
     }
@@ -151,18 +149,19 @@ public class SmartClientTest {
 
         String signature = sign("GET\n\n\n" + date + "\n" + path + "\nx-emc-date:" + date + "\nx-emc-uid:" + uid, secretKey);
 
-        WebResource.Builder request = client.resource(serverUri).path(path).getRequestBuilder();
+        WebTarget webTarget = client.target(serverUri).path(path);
+        Invocation invocation = webTarget.request("application/xml")
+                .header("Date", date)
+                .header("x-emc-date", date)
+                .header("x-emc-uid", uid)
+                .header("x-emc-signature", signature)
+                .buildGet();
 
-        request.header("Date", date);
-        request.header("x-emc-date", date);
-        request.header("x-emc-uid", uid);
-        request.header("x-emc-signature", signature);
-
-        ClientResponse response = request.get(ClientResponse.class);
+        Response response = invocation.invoke(Response.class);
 
         if (response.getStatus() > 299) throw new RuntimeException("error response: " + response.getStatus());
 
-        String responseStr = response.getEntity(String.class);
+        String responseStr = (String)response.getEntity();
         if (!responseStr.contains("Atmos")) throw new RuntimeException("unrecognized response string: " + responseStr);
     }
 
