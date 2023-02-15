@@ -16,9 +16,11 @@
 package com.emc.rest.smart;
 
 import com.emc.rest.util.RequestSimulator;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogMF;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import org.apache.logging.log4j.message.ParameterizedMessage;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -31,7 +33,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class LoadBalancerTest {
-    private static final Logger l4j = Logger.getLogger(LoadBalancerTest.class);
+    private static final Logger l4j = LogManager.getLogger(LoadBalancerTest.class);
 
     @Test
     public void testDistribution() {
@@ -58,9 +60,9 @@ public class LoadBalancerTest {
     @Test
     public void testEfficiency() throws Exception {
         // turn down logging (will skew result drastically)
-        Logger hostLogger = Logger.getLogger(Host.class);
+        Logger hostLogger = LogManager.getLogger(Host.class);
         Level logLevel = hostLogger.getLevel();
-        hostLogger.setLevel(Level.WARN);
+        hostLogger.atLevel(Level.WARN);
 
 
         SmartConfig smartConfig = new SmartConfig("foo", "bar", "baz", "biz");
@@ -83,8 +85,8 @@ public class LoadBalancerTest {
 
         l4j.info(Arrays.toString(loadBalancer.getHostStats()));
 
-        LogMF.warn(l4j, "per call overhead: {0}µs", perCallOverhead / 1000);
-        hostLogger.setLevel(logLevel);
+        l4j.warn(new ParameterizedMessage("per call overhead: {0}µs", perCallOverhead / 1000));
+        hostLogger.atLevel(logLevel);
 
         Assert.assertTrue("call overhead too high", perCallOverhead < 100000); // must be less than .1ms
     }

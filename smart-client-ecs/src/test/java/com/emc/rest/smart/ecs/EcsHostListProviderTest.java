@@ -25,6 +25,7 @@ import org.glassfish.jersey.client.ClientProperties;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.WebTarget;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;

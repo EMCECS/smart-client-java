@@ -18,10 +18,10 @@ package com.emc.rest.smart;
 import com.emc.rest.smart.jersey.SmartClientFactory;
 import com.emc.util.TestConfig;
 import javax.ws.rs.ProcessingException;
-import org.apache.commons.codec.binary.Base64;
+
 import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.glassfish.jersey.client.ClientProperties;
+import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
@@ -73,7 +73,7 @@ public class SmartClientTest {
         }
 
         SmartConfig smartConfig = new SmartConfig(initialHosts);
-        final Client client = SmartClientFactory.createSmartClient(smartConfig);
+        final Client client = SmartClientFactory.createSmartClient(smartConfig, null);
 
         ExecutorService service = Executors.newFixedThreadPool(10);
 
@@ -108,7 +108,7 @@ public class SmartClientTest {
         byte[] data = "JSON Stream Test".getBytes();
 
         SmartConfig smartConfig = new SmartConfig(initialHosts);
-        Client client = SmartClientFactory.createSmartClient(smartConfig);
+        Client client = SmartClientFactory.createSmartClient(smartConfig, null);
 
         // this is an illegal use of this resource, but we just want to make sure the request is sent
         // (no exception when finding a MessageBodyWriter)
@@ -125,7 +125,7 @@ public class SmartClientTest {
 
         SmartConfig smartConfig = new SmartConfig("8.8.4.4:9020");
 
-        final Client client = SmartClientFactory.createStandardClient(smartConfig);
+        final Client client = SmartClientFactory.createStandardClient(smartConfig, null);
         client.property(ClientProperties.CONNECT_TIMEOUT, CONNECTION_TIMEOUT_MILLIS);
 
         Future<?> future = Executors.newSingleThreadExecutor().submit(() -> {
@@ -167,7 +167,7 @@ public class SmartClientTest {
 
     private String sign(String canonicalString, String secretKey) {
         try {
-            byte[] hashKey = Base64.decodeBase64(secretKey.getBytes(StandardCharsets.UTF_8));
+            byte[] hashKey = Base64.getDecoder().decode(secretKey.getBytes(StandardCharsets.UTF_8));
             byte[] input = canonicalString.getBytes(StandardCharsets.UTF_8);
 
             Mac mac = Mac.getInstance("HmacSHA1");
@@ -176,7 +176,7 @@ public class SmartClientTest {
 
             byte[] hashBytes = mac.doFinal(input);
 
-            return new String(Base64.encodeBase64(hashBytes), StandardCharsets.UTF_8);
+            return new String(Base64.getDecoder().decode(hashBytes), StandardCharsets.UTF_8);
         } catch (Exception e) {
             throw new RuntimeException("Error signing string:\n" + canonicalString + "\n", e);
         }

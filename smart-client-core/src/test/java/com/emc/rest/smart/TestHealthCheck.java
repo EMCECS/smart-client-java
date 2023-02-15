@@ -16,7 +16,8 @@
 package com.emc.rest.smart;
 
 import com.emc.rest.util.RequestSimulator;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -24,7 +25,7 @@ import java.util.Arrays;
 import java.util.List;
 
 public class TestHealthCheck {
-    private static final Logger l4j = Logger.getLogger(TestHealthCheck.class);
+    private static final Logger l4j = LogManager.getLogger(TestHealthCheck.class);
 
     @Test
     public void testUnhealthyHostIgnored() {

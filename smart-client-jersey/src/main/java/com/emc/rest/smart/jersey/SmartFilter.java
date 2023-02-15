@@ -20,14 +20,12 @@ import com.emc.rest.smart.SmartClientException;
 import com.emc.rest.smart.SmartConfig;
 import org.apache.http.HttpHost;
 import org.apache.http.client.utils.URIUtils;
-import org.glassfish.jersey.client.InjectionManagerClientProvider;
-import org.glassfish.jersey.internal.inject.InjectionManager;
-import org.glassfish.jersey.internal.inject.Providers;
 
 import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientRequestFilter;
 import javax.ws.rs.client.ClientResponseContext;
 import javax.ws.rs.client.ClientResponseFilter;
+import javax.ws.rs.ext.Provider;
 
 import java.io.FilterInputStream;
 import java.io.IOException;
@@ -35,29 +33,28 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-public class SmartFilter implements ClientResponseFilter {
+@Provider
+public class SmartFilter implements ClientRequestFilter, ClientResponseFilter {
     public static final String BYPASS_LOAD_BALANCER = "com.emc.rest.smart.bypassLoadBalancer";
+    public static final int PRIORITY_SMART = 1400; // the value is decided by filters' order
 
     private final SmartConfig smartConfig;
+    private Host host;
 
     public SmartFilter(SmartConfig smartConfig) {
         this.smartConfig = smartConfig;
     }
 
     @Override
-    public void filter(ClientRequestContext requestContext, ClientResponseContext responseContext) throws IOException {
-        final InjectionManager injectionManager = InjectionManagerClientProvider.getInjectionManager(requestContext);
+    public void filter(ClientRequestContext requestContext) throws IOException {
         // check for bypass flag
         Boolean bypass = (Boolean) requestContext.getProperty(BYPASS_LOAD_BALANCER);
-        Iterable<ClientRequestFilter> requestFilters = Providers.getAllProviders(injectionManager, ClientRequestFilter.class);
         if (bypass != null && bypass) {
-            if (requestFilters.iterator().hasNext())
-                requestFilters.iterator().next().filter(requestContext);
+            return;
         }
 
-
         // get highest ranked host for next request
-        Host host = smartConfig.getLoadBalancer().getTopHost(requestContext.getConfiguration().getProperties());
+        host = smartConfig.getLoadBalancer().getTopHost(requestContext.getConfiguration().getProperties());
 
         // replace the host in the request
         URI uri = requestContext.getUri();
@@ -72,10 +69,12 @@ public class SmartFilter implements ClientResponseFilter {
 
         // track requests stats for LB ranking
         host.connectionOpened(); // not really, but we can't (cleanly) intercept any lower than this
+
+    }
+
+    @Override
+    public void filter(ClientRequestContext requestContext, ClientResponseContext responseContext) throws IOException {
         try {
-            // call to delegate
-            if (requestFilters.iterator().hasNext())
-                requestFilters.iterator().next().filter(requestContext);
 
             // capture request stats
             // except for 501 (not implemented), all 50x responses are considered server errors
