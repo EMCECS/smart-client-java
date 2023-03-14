@@ -60,8 +60,15 @@ public final class SmartClientFactory {
             client = createStandardClient(smartConfig, null);
         }
 
+        // If you register a second ClientConfig object on the same Client, it will overwrite the first config,
+        // and the providers that were registered on the first config will be lost.
+        ClientConfig clientConfig = new ClientConfig();
+        for (String propName : smartConfig.getProperties().keySet()) {
+            clientConfig.property(propName, smartConfig.getProperty(propName));
+        }
+
         // inject SmartFilter (this is the Jersey integration point of the load balancer)
-        client.register(new SmartFilter(smartConfig), PRIORITY_SMART);
+        clientConfig.register(new SmartFilter(smartConfig), PRIORITY_SMART);
 
         // set up polling for updated host list (if polling is disabled in smartConfig or there's no host list provider,
         // nothing will happen)
@@ -69,9 +76,9 @@ public final class SmartClientFactory {
         pollingDaemon.start();
 
         // attach the daemon thread to the client so users can stop it when finished with the client
-        client.property(PollingDaemon.PROPERTY_KEY, pollingDaemon);
+        clientConfig.property(PollingDaemon.PROPERTY_KEY, pollingDaemon);
 
-        return client;
+        return ClientBuilder.newClient(clientConfig);
     }
 
     /**
@@ -84,12 +91,6 @@ public final class SmartClientFactory {
         if (client == null) {
             client = createApacheClient(smartConfig);
         }
-        // If you register a second ClientConfig object on the same Client, it will overwrite the first config,
-        // and the providers that were registered on the first config will be lost.
-//        ClientConfig clientConfig = new ClientConfig();
-//        for (String propName : smartConfig.getProperties().keySet()) {
-//            clientConfig.property(propName, smartConfig.getProperty(propName));
-//        }
 
         // replace sized writers with override writers to allow dynamic content-length (i.e. for transformations)
         client.register(SizeOverrideWriter.ByteArray.class);
@@ -159,7 +160,6 @@ public final class SmartClientFactory {
         connectionManager.setDefaultMaxPerRoute(smartConfig.getIntProperty(MAX_CONNECTIONS_PER_HOST, MAX_CONNECTIONS_PER_HOST_DEFAULT));
         connectionManager.setMaxTotal(smartConfig.getIntProperty(MAX_CONNECTIONS, MAX_CONNECTIONS_DEFAULT));
         clientConfig.property(ApacheClientProperties.CONNECTION_MANAGER, connectionManager);
-
         clientConfig.connectorProvider(new ApacheConnectorProvider());
 
         if (smartConfig.getMaxConnectionIdleTime() > 0) {
