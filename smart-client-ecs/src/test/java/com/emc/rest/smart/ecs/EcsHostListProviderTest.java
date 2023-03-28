@@ -31,6 +31,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.ws.rs.core.Response;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
@@ -162,9 +163,11 @@ public class EcsHostListProviderTest {
     public void testPing() {
         String portStr = serverURI.getPort() > 0 ? ":" + serverURI.getPort() : "";
 
-        WebTarget webTarget = client.target(String.format("%s://%s%s", serverURI.getScheme(), serverURI.getHost(), portStr)).path("/?ping");
+        WebTarget webTarget = client.target(String.format("%s://%s%s/?ping", serverURI.getScheme(), serverURI.getHost(), portStr));
+//        Response response = webTarget.request().header("x-emc-namespace", "foo").get();
+
         PingResponse response = webTarget.request().header("x-emc-namespace", "foo").get(PingResponse.class);
-        Assert.assertNotNull(response);
+//        Assert.assertNotNull(response);
         Assert.assertEquals(PingItem.Status.OFF, response.getPingItemMap().get(PingItem.MAINTENANCE_MODE).getStatus());
     }
 

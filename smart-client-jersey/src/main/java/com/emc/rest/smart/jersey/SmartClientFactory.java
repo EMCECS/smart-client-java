@@ -56,9 +56,9 @@ public final class SmartClientFactory {
 
     public static Client createSmartClient(SmartConfig smartConfig,
                                            Client client) {
-        if (client == null) {
-            client = createStandardClient(smartConfig, null);
-        }
+//        if (client == null) {
+//            client = createStandardClient(smartConfig, null);
+//        }
 
         // If you register a second ClientConfig object on the same Client, it will overwrite the first config,
         // and the providers that were registered on the first config will be lost.

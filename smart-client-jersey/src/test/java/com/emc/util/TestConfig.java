@@ -15,7 +15,8 @@
  */
 package com.emc.util;
 
-import org.junit.jupiter.api.Assumptions;
+import jdk.vm.ci.meta.Assumptions;
+import org.junit.Assume;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -51,7 +52,7 @@ public class TestConfig {
         }
 
         if (in == null) {
-            Assumptions.assumeFalse(failIfMissing, projectName + ".properties missing (look in src/test/resources for template)");
+            Assume.assumeFalse(projectName + ".properties missing (look in src/test/resources for template)", failIfMissing);
             return null;
         }
 
@@ -81,7 +82,7 @@ public class TestConfig {
      */
     public static String getPropertyNotEmpty(Properties p, String key) {
         String value = p.getProperty(key);
-        Assumptions.assumeTrue(value != null && !value.isEmpty(), String.format("The property %s is required", key));
+        Assume.assumeTrue(String.format("The property %s is required", key), value != null && !value.isEmpty());
         return value;
     }
 }

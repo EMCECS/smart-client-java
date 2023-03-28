@@ -8,6 +8,8 @@ dependencies {
     implementation 'commons-codec:commons-codec:1.15'
     // jaxb was removed from Java 11 - jaxb dependencies are provided with Java 8
     implementation "javax.xml.bind:jaxb-api:2.3.1"
+    implementation 'org.glassfish.jaxb:jaxb-runtime:2.3.1'
+    implementation "javax.activation:activation:1.1"
 
     implementation 'org.slf4j:slf4j-api:2.0.6'
     testImplementation 'junit:junit:4.13.2'
