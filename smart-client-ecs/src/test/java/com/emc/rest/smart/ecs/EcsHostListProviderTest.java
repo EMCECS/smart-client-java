@@ -162,12 +162,9 @@ public class EcsHostListProviderTest {
     @Test
     public void testPing() {
         String portStr = serverURI.getPort() > 0 ? ":" + serverURI.getPort() : "";
-
         WebTarget webTarget = client.target(String.format("%s://%s%s/?ping", serverURI.getScheme(), serverURI.getHost(), portStr));
-//        Response response = webTarget.request().header("x-emc-namespace", "foo").get();
-
         PingResponse response = webTarget.request().header("x-emc-namespace", "foo").get(PingResponse.class);
-//        Assert.assertNotNull(response);
+        Assert.assertNotNull(response);
         Assert.assertEquals(PingItem.Status.OFF, response.getPingItemMap().get(PingItem.MAINTENANCE_MODE).getStatus());
     }
 
