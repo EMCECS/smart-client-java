@@ -32,6 +32,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.HashMap;
+import java.util.Map;
 
 @Provider
 public class SmartFilter implements ClientRequestFilter, ClientResponseFilter {
@@ -54,7 +56,11 @@ public class SmartFilter implements ClientRequestFilter, ClientResponseFilter {
         }
 
         // get highest ranked host for next request
-        host = smartConfig.getLoadBalancer().getTopHost(requestContext.getConfiguration().getProperties());
+        Map<String, Object> requestProperties = new HashMap<>(requestContext.getConfiguration().getProperties());
+        for (String propertyName: requestContext.getPropertyNames()) {
+            requestProperties.put(propertyName, requestContext.getProperty(propertyName));
+        }
+        host = smartConfig.getLoadBalancer().getTopHost(requestProperties);
 
         // replace the host in the request
         URI uri = requestContext.getUri();
