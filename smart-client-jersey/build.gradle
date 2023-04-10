@@ -6,7 +6,7 @@ dependencies {
     implementation 'org.glassfish.jersey.connectors:jersey-apache-connector:2.38'
     implementation 'org.glassfish.jersey.inject:jersey-hk2:2.38'
 
-    implementation 'org.apache.httpcomponents:httpclient:4.5.13'
+    implementation 'org.apache.httpcomponents:httpclient:4.5.14'
     implementation 'org.glassfish.jersey.media:jersey-media-json-jackson:2.38'
     implementation 'org.glassfish.jersey.media:jersey-media-json-processing:2.38'
     implementation 'org.glassfish.jersey.media:jersey-media-jaxb:2.38'

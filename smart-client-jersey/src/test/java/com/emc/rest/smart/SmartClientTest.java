@@ -73,7 +73,7 @@ public class SmartClientTest {
         }
 
         SmartConfig smartConfig = new SmartConfig(initialHosts);
-        final Client client = SmartClientFactory.createSmartClient(smartConfig, null);
+        final Client client = SmartClientFactory.createSmartClient(smartConfig);
 
         ExecutorService service = Executors.newFixedThreadPool(10);
 
@@ -108,7 +108,7 @@ public class SmartClientTest {
         byte[] data = "JSON Stream Test".getBytes();
 
         SmartConfig smartConfig = new SmartConfig(initialHosts);
-        Client client = SmartClientFactory.createSmartClient(smartConfig, null);
+        Client client = SmartClientFactory.createSmartClient(smartConfig);
 
         // this is an illegal use of this resource, but we just want to make sure the request is sent
         // (no exception when finding a MessageBodyWriter)

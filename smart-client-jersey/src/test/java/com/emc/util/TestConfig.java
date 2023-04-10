@@ -15,7 +15,6 @@
  */
 package com.emc.util;
 
-import jdk.vm.ci.meta.Assumptions;
 import org.junit.Assume;
 
 import java.io.File;
