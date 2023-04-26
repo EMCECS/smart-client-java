@@ -18,14 +18,13 @@ package com.emc.rest.smart.jersey;
 import com.emc.rest.smart.PollingDaemon;
 import com.emc.rest.smart.SmartConfig;
 import com.fasterxml.jackson.jaxrs.xml.JacksonJaxbXMLProvider;
-import org.apache.http.conn.ConnectionKeepAliveStrategy;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.glassfish.jersey.apache.connector.ApacheClientProperties;
 import org.glassfish.jersey.apache.connector.ApacheConnectorProvider;
-import org.glassfish.jersey.client.ClientConfig;
-import org.glassfish.jersey.client.ClientProperties;
-import org.glassfish.jersey.client.JerseyClientBuilder;
+import org.glassfish.jersey.apache.connector.ApacheHttpClientBuilderConfigurator;
+import org.glassfish.jersey.client.*;
 import org.glassfish.jersey.jackson.internal.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.glassfish.jersey.message.internal.ByteArrayProvider;
 import org.glassfish.jersey.message.internal.FileProvider;
@@ -33,7 +32,7 @@ import org.glassfish.jersey.message.internal.InputStreamProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.client.Client;
+import javax.ws.rs.core.Configuration;
 import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -55,13 +54,20 @@ public final class SmartClientFactory {
 
     public static final String IDLE_CONNECTION_MONITOR_PROPERTY_KEY = "com.emc.rest.smart.idleConnectionsExecSvc";
 
-    public static Client createSmartClient(SmartConfig smartConfig) {
+    public static JerseyClient createSmartClient(SmartConfig smartConfig, JerseyClient client) {
 
         // If you register a second ClientConfig object on the same Client, it will overwrite the first config,
         // and the providers that were registered on the first config will be lost.
         ClientConfig clientConfig = new ClientConfig();
         for (String propName : smartConfig.getProperties().keySet())
             clientConfig.property(propName, smartConfig.getProperty(propName));
+        // not only smartConfig properties, we also need involve ClientConfig properties into th new Client.
+        // By now we tend to have a Client by JerseyClientBuilder.createClient and many copies.
+        if (client != null) {
+            for (String propName : client.getConfiguration().getProperties().keySet())
+                clientConfig.property(propName, client.getConfiguration().getProperty(propName));
+            client.close();
+        }
 
         // inject SmartFilter (this is the Jersey integration point of the load balancer)
         clientConfig.register(new SmartFilter(smartConfig), PRIORITY_SMART);
@@ -74,7 +80,6 @@ public final class SmartClientFactory {
         // attach the daemon thread to the client so users can stop it when finished with the client
         clientConfig.property(PollingDaemon.PROPERTY_KEY, pollingDaemon);
 
-        // avoid UrlConnectionProvider
         clientConfig.connectorProvider(new ApacheConnectorProvider());
 
         return JerseyClientBuilder.createClient(clientConfig);
@@ -84,9 +89,9 @@ public final class SmartClientFactory {
      * This creates a standard apache-based Jersey client, configured with a SmartConfig, but without any load balancing
      * or node polling.
      */
-    public static Client createStandardClient(SmartConfig smartConfig,
-                                              Client clientHandler) {
-        Client client = clientHandler == null ? createApacheClient(smartConfig) : clientHandler;
+    public static JerseyClient createStandardClient(SmartConfig smartConfig,
+                                              JerseyClient clientHandler) {
+        JerseyClient client = (clientHandler == null ? createApacheClient(smartConfig) : clientHandler);
 
         // replace sized writers with override writers to allow dynamic content-length (i.e. for transformations)
         client.register(SizeOverrideWriter.ByteArray.class);
@@ -99,7 +104,6 @@ public final class SmartClientFactory {
 
         // add support for XML with no content-type
         client.register(OctetStreamXmlProvider.class);
-
         // add JSON support (using Jackson's ObjectMapper instead of JAXB marshalling)
         JacksonJaxbJsonProvider jsonProvider = new JacksonJaxbJsonProvider();
         // make sure we don't try to serialize any of these type hierarchies (clearly a bug in JacksonJsonProvider)
@@ -107,10 +111,8 @@ public final class SmartClientFactory {
         jsonProvider.addUntouchable(OutputStream.class);
         jsonProvider.addUntouchable(File.class);
         client.register(jsonProvider);
-
         client.register(JacksonJaxbXMLProvider.class);
 
-        // build Jersey client
         return client;
     }
 
@@ -124,8 +126,9 @@ public final class SmartClientFactory {
      * The client must not be reused after this method is called otherwise
      * undefined behavior will occur.
      */
-    public static void destroy(Client client) {
-        PollingDaemon pollingDaemon = (PollingDaemon) client.getConfiguration().getProperty(PollingDaemon.PROPERTY_KEY);
+    public static void destroy(JerseyClient client) {
+        Configuration config = client.getConfiguration();
+        PollingDaemon pollingDaemon = (PollingDaemon) config.getProperty(PollingDaemon.PROPERTY_KEY);
         if (pollingDaemon != null) {
             log.debug("terminating polling daemon");
             pollingDaemon.terminate();
@@ -135,34 +138,30 @@ public final class SmartClientFactory {
             }
         }
 
-        ScheduledExecutorService sched = (ScheduledExecutorService)client.getConfiguration().getProperty(IDLE_CONNECTION_MONITOR_PROPERTY_KEY);
+        ScheduledExecutorService sched = (ScheduledExecutorService)config.getProperty(IDLE_CONNECTION_MONITOR_PROPERTY_KEY);
         if (sched != null) {
             log.debug("shutting down scheduled idle connections monitoring task");
             sched.shutdownNow();
         }
 
-        log.debug("destroying Jersey client");
+        MyPoolingHttpClientConnectionManager cm = (MyPoolingHttpClientConnectionManager)config.getProperty(ApacheClientProperties.CONNECTION_MANAGER);
+        if (cm != null) {
+            log.debug("shutting down the connection manager");
+            cm.realShutDown();
+        }
+
+        // closing the client would also shut down the connection manager
+        log.info("destroying Jersey client");
         client.close();
     }
 
-    static Client createApacheClient(SmartConfig smartConfig) {
+    static JerseyClient createApacheClient(SmartConfig smartConfig) {
         ClientConfig clientConfig = new ClientConfig();
 
         // set up multi-threaded connection pool
-        PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
+        MyPoolingHttpClientConnectionManager connectionManager = new MyPoolingHttpClientConnectionManager();
         connectionManager.setDefaultMaxPerRoute(smartConfig.getIntProperty(MAX_CONNECTIONS_PER_HOST, MAX_CONNECTIONS_PER_HOST_DEFAULT));
         connectionManager.setMaxTotal(smartConfig.getIntProperty(MAX_CONNECTIONS, MAX_CONNECTIONS_DEFAULT));
-
-        ConnectionKeepAliveStrategy keepAliveStrategy = (response, context) -> {
-            // Log when a connection is released
-            log.debug("Connection released: " + context.getAttribute("http.connection"));
-            // Set the keep-alive duration to a reasonable value
-            return 5 * 1000;
-        };
-        clientConfig.property(ApacheClientProperties.KEEPALIVE_STRATEGY, keepAliveStrategy);
-
-        clientConfig.property(ApacheClientProperties.CONNECTION_MANAGER, connectionManager);
-        clientConfig.connectorProvider(new ApacheConnectorProvider());
 
         if (smartConfig.getMaxConnectionIdleTime() > 0) {
             ScheduledExecutorService sched = Executors.newSingleThreadScheduledExecutor();
@@ -170,6 +169,9 @@ public final class SmartClientFactory {
                     connectionManager.closeIdleConnections(smartConfig.getMaxConnectionIdleTime(), TimeUnit.SECONDS), 0, 60, TimeUnit.SECONDS);
             smartConfig.setProperty(IDLE_CONNECTION_MONITOR_PROPERTY_KEY, sched);
         }
+
+        clientConfig.property(ApacheClientProperties.CONNECTION_MANAGER, connectionManager);
+        clientConfig.connectorProvider(new ApacheConnectorProvider());
 
         // set proxy config
         if (smartConfig.getProxyUri() != null)

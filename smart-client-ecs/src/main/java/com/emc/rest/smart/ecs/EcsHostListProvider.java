@@ -22,6 +22,7 @@ import javax.ws.rs.client.Client;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
 import org.apache.commons.codec.binary.Base64;
+import org.glassfish.jersey.client.JerseyClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +42,7 @@ public class EcsHostListProvider implements HostListProvider {
     public static final int DEFAULT_PORT = 9021;
 
     protected final SimpleDateFormat rfc822DateFormat;
-    private final Client client;
+    private final JerseyClient client;
     private final LoadBalancer loadBalancer;
     private final String user;
     private final String secret;
@@ -49,7 +50,7 @@ public class EcsHostListProvider implements HostListProvider {
     private int port = DEFAULT_PORT;
     private List<Vdc> vdcs;
 
-    public EcsHostListProvider(Client client, LoadBalancer loadBalancer, String user, String secret) {
+    public EcsHostListProvider(JerseyClient client, LoadBalancer loadBalancer, String user, String secret) {
         this.client = client;
         this.loadBalancer = loadBalancer;
         this.user = user;

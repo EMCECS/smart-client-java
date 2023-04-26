@@ -26,6 +26,8 @@ import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.WebTarget;
 
+import org.glassfish.jersey.client.JerseyClient;
+import org.glassfish.jersey.client.JerseyClientBuilder;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -51,7 +53,7 @@ public class EcsHostListProviderTest {
     public static final String PROXY_URI = "http.proxyUri";
 
     private URI serverURI;
-    private Client client;
+    private JerseyClient client;
     private EcsHostListProvider hostListProvider;
 
     @Before
@@ -66,7 +68,7 @@ public class EcsHostListProviderTest {
         ClientConfig clientConfig = new ClientConfig();
         clientConfig.property(ApacheClientProperties.CONNECTION_MANAGER, new PoolingHttpClientConnectionManager());
         if (proxyUri != null) clientConfig.getProperties().put(ClientProperties.PROXY_URI, proxyUri);
-        client = ClientBuilder.newClient(clientConfig);
+        client = JerseyClientBuilder.createClient(clientConfig);
 
         SmartConfig smartConfig = new SmartConfig(serverURI.getHost());
 

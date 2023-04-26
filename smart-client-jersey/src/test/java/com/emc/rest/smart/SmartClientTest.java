@@ -22,6 +22,7 @@ import javax.ws.rs.ProcessingException;
 import org.apache.logging.log4j.LogManager;
 import org.glassfish.jersey.client.ClientProperties;
 import org.apache.logging.log4j.Logger;
+import org.glassfish.jersey.client.JerseyClient;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
@@ -73,7 +74,7 @@ public class SmartClientTest {
         }
 
         SmartConfig smartConfig = new SmartConfig(initialHosts);
-        final Client client = SmartClientFactory.createSmartClient(smartConfig);
+        final JerseyClient client = SmartClientFactory.createSmartClient(smartConfig, null);
 
         ExecutorService service = Executors.newFixedThreadPool(10);
 
@@ -108,7 +109,7 @@ public class SmartClientTest {
         byte[] data = "JSON Stream Test".getBytes();
 
         SmartConfig smartConfig = new SmartConfig(initialHosts);
-        Client client = SmartClientFactory.createSmartClient(smartConfig);
+        JerseyClient client = SmartClientFactory.createSmartClient(smartConfig, null);
 
         // this is an illegal use of this resource, but we just want to make sure the request is sent
         // (no exception when finding a MessageBodyWriter)
@@ -125,7 +126,7 @@ public class SmartClientTest {
 
         SmartConfig smartConfig = new SmartConfig("8.8.4.4:9020");
 
-        final Client client = SmartClientFactory.createStandardClient(smartConfig, null);
+        final JerseyClient client = SmartClientFactory.createStandardClient(smartConfig, null);
         client.property(ClientProperties.CONNECT_TIMEOUT, CONNECTION_TIMEOUT_MILLIS);
 
         Future<?> future = Executors.newSingleThreadExecutor().submit(() -> {
@@ -143,7 +144,7 @@ public class SmartClientTest {
         }
     }
 
-    private void getServiceInfo(Client client, URI serverUri, String uid, String secretKey) {
+    private void getServiceInfo(JerseyClient client, URI serverUri, String uid, String secretKey) {
         String path = "/rest/service";
         String date = getDateFormat().format(new Date());
 
