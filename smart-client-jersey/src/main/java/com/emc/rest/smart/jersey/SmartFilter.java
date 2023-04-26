@@ -56,7 +56,11 @@ public class SmartFilter implements ClientRequestFilter, ClientResponseFilter {
         }
 
         // get highest ranked host for next request
-        host = smartConfig.getLoadBalancer().getTopHost(requestContext.getConfiguration().getProperties());
+        Map<String, Object> requestProperties = new HashMap<>();
+        requestContext.getPropertyNames().forEach(propertyName -> requestProperties.put(propertyName, requestContext.getProperty(propertyName)));
+        // requestContext.getConfiguration().getProperties() is an unmodifiable map
+        requestProperties.putAll(requestContext.getConfiguration().getProperties());
+        host = smartConfig.getLoadBalancer().getTopHost(requestProperties);
 
         // replace the host in the request
         URI uri = requestContext.getUri();

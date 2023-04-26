@@ -18,11 +18,10 @@ package com.emc.rest.smart.ecs;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.HostListProvider;
 import com.emc.rest.smart.LoadBalancer;
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.Invocation;
-import javax.ws.rs.client.WebTarget;
 import org.apache.commons.codec.binary.Base64;
 import org.glassfish.jersey.client.JerseyClient;
+import org.glassfish.jersey.client.JerseyInvocation;
+import org.glassfish.jersey.client.JerseyWebTarget;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -92,8 +91,8 @@ public class EcsHostListProvider implements HostListProvider {
     @Override
     public void runHealthCheck(Host host) {
         // header is workaround for STORAGE-1833
-        WebTarget webTarget = client.target(getRequestUri(host, "/?ping"));
-        Invocation invocation = webTarget.request()
+        JerseyWebTarget webTarget = client.target(getRequestUri(host, "/?ping"));
+        JerseyInvocation invocation = webTarget.request()
                 .header("x-emc-namespace", "x")
                 .header("Connection", "close") // make sure maintenance calls are not kept alive
                 .buildGet();
@@ -134,8 +133,8 @@ public class EcsHostListProvider implements HostListProvider {
         }
 
         // construct request
-        WebTarget webTarget = client.target(uri);
-        Invocation invocation = webTarget.request()
+        JerseyWebTarget webTarget = client.target(uri);
+        JerseyInvocation invocation = webTarget.request()
                 .header("Date", rfcDate) // add date and auth headers
                 .header("Authorization", "AWS " + user + ":" + signature)
                 .header("Connection", "close") // make sure maintenance calls are not kept alive
@@ -208,7 +207,7 @@ public class EcsHostListProvider implements HostListProvider {
         }
     }
 
-    public Client getClient() {
+    public JerseyClient getClient() {
         return client;
     }
 
