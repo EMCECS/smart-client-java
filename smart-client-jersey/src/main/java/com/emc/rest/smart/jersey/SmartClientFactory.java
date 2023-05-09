@@ -63,7 +63,6 @@ public final class SmartClientFactory {
         if (client != null) {
             for (String propName : client.getConfiguration().getProperties().keySet())
                 clientConfig.property(propName, client.getConfiguration().getProperty(propName));
-            client.close();
         }
 
         // inject SmartFilter (this is the Jersey integration point of the load balancer)
