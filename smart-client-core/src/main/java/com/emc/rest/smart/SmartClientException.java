@@ -1,8 +1,6 @@
 package com.emc.rest.smart;
 
-import javax.ws.rs.WebApplicationException;
-
-public class SmartClientException extends WebApplicationException {
+public class SmartClientException extends RuntimeException {
 
     private ErrorType errorType = ErrorType.Unknown;
 
