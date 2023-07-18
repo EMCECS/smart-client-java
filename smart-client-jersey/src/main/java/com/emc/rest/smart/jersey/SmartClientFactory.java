@@ -43,6 +43,7 @@ public final class SmartClientFactory {
 
     private static final Logger log = LoggerFactory.getLogger(SmartClientFactory.class);
 
+    public static final String APACHE_CONNECTOR = "com.emc.rest.smart.apacheConnector";
     public static final String DISABLE_APACHE_RETRY = "com.emc.rest.smart.disableApacheRetry";
     public static final String MAX_CONNECTIONS = "com.emc.rest.smart.apacheMaxConnections";
     public static final String MAX_CONNECTIONS_PER_HOST = "com.emc.rest.smart.apacheMaxConnectionsPerHost";
@@ -76,7 +77,8 @@ public final class SmartClientFactory {
         // attach the daemon thread to the client so users can stop it when finished with the client
         clientConfig.property(PollingDaemon.PROPERTY_KEY, pollingDaemon);
 
-        clientConfig.connectorProvider(new ApacheConnectorProvider());
+        if ((boolean) smartConfig.getProperty(APACHE_CONNECTOR))
+            clientConfig.connectorProvider(new ApacheConnectorProvider());
 
         return JerseyClientBuilder.createClient(clientConfig);
     }
@@ -152,6 +154,8 @@ public final class SmartClientFactory {
     }
 
     static JerseyClient createApacheClient(SmartConfig smartConfig) {
+        smartConfig.setProperty(APACHE_CONNECTOR, true);
+
         ClientConfig clientConfig = new ClientConfig();
 
         // set up multi-threaded connection pool
