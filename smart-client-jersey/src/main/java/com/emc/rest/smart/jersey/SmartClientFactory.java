@@ -43,7 +43,7 @@ public final class SmartClientFactory {
 
     private static final Logger log = LoggerFactory.getLogger(SmartClientFactory.class);
 
-    public static final String APACHE_CONNECTOR = "com.emc.rest.smart.apacheConnector";
+    public static final String CONNECTOR_PROVIDER = "com.emc.rest.smart.connector";
     public static final String DISABLE_APACHE_RETRY = "com.emc.rest.smart.disableApacheRetry";
     public static final String MAX_CONNECTIONS = "com.emc.rest.smart.apacheMaxConnections";
     public static final String MAX_CONNECTIONS_PER_HOST = "com.emc.rest.smart.apacheMaxConnectionsPerHost";
@@ -77,7 +77,7 @@ public final class SmartClientFactory {
         // attach the daemon thread to the client so users can stop it when finished with the client
         clientConfig.property(PollingDaemon.PROPERTY_KEY, pollingDaemon);
 
-        if ((boolean) smartConfig.getProperty(APACHE_CONNECTOR))
+        if (smartConfig.getProperty(CONNECTOR_PROVIDER) != null && smartConfig.getProperty(CONNECTOR_PROVIDER).equals("APACHE"))
             clientConfig.connectorProvider(new ApacheConnectorProvider());
 
         return JerseyClientBuilder.createClient(clientConfig);
@@ -90,6 +90,11 @@ public final class SmartClientFactory {
     public static JerseyClient createStandardClient(SmartConfig smartConfig,
                                               JerseyClient clientHandler) {
         JerseyClient client = (clientHandler == null ? createApacheClient(smartConfig) : clientHandler);
+
+        // pass in jersey parameters from calling code (allows customization of client)
+        for (String propName : smartConfig.getProperties().keySet()) {
+            client.property(propName, smartConfig.getProperty(propName));
+        }
 
         // replace sized writers with override writers to allow dynamic content-length (i.e. for transformations)
         client.register(SizeOverrideWriter.ByteArray.class);
@@ -154,7 +159,7 @@ public final class SmartClientFactory {
     }
 
     static JerseyClient createApacheClient(SmartConfig smartConfig) {
-        smartConfig.setProperty(APACHE_CONNECTOR, true);
+        smartConfig.setProperty(CONNECTOR_PROVIDER, "APACHE");
 
         ClientConfig clientConfig = new ClientConfig();
 
@@ -180,11 +185,6 @@ public final class SmartClientFactory {
             clientConfig.property(ClientProperties.PROXY_USERNAME, smartConfig.getProxyUser());
         if (smartConfig.getProxyPass() != null)
             clientConfig.property(ClientProperties.PROXY_PASSWORD, smartConfig.getProxyPass());
-
-        // pass in jersey parameters from calling code (allows customization of client)
-        for (String propName : smartConfig.getProperties().keySet()) {
-            clientConfig.property(propName, smartConfig.getProperty(propName));
-        }
 
         // disable the retry handler if necessary
         if (smartConfig.getProperty(DISABLE_APACHE_RETRY) != null) {
