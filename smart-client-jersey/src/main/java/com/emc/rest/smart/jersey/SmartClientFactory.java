@@ -52,6 +52,9 @@ public final class SmartClientFactory {
 
     public static final String IDLE_CONNECTION_MONITOR_PROPERTY_KEY = "com.emc.rest.smart.idleConnectionsExecSvc";
 
+    public static final String APACHE_TRANSPORT_CONNECTOR = "APACHE";
+    public static final String HTTPURLCONNECTION_TRANSPORT_CONNECTOR = "HTTPURLCONNECTION";
+
     public static JerseyClient createSmartClient(SmartConfig smartConfig, JerseyClient client) {
 
         // If you register a second ClientConfig object on the same Client, it will overwrite the first config,
@@ -87,9 +90,25 @@ public final class SmartClientFactory {
      * This creates a standard apache-based Jersey client, configured with a SmartConfig, but without any load balancing
      * or node polling.
      */
+    public static JerseyClient createStandardClient(SmartConfig smartConfig) {
+        return createStandardClient(smartConfig, APACHE_TRANSPORT_CONNECTOR);
+    }
+
+    /**
+     * This creates a standard apache-based Jersey client, configured with a SmartConfig, but without any load balancing
+     * or node polling.
+     */
     public static JerseyClient createStandardClient(SmartConfig smartConfig,
-                                              JerseyClient clientHandler) {
-        JerseyClient client = (clientHandler == null ? createApacheClient(smartConfig) : clientHandler);
+                                                    String clientTransportConnector) {
+
+        JerseyClient client = JerseyClientBuilder.createClient();
+
+        // register connection provider onto client
+        if (clientTransportConnector == null || clientTransportConnector.equals(APACHE_TRANSPORT_CONNECTOR))
+            client = createApacheClient(smartConfig);
+        else if (clientTransportConnector.equals(HTTPURLCONNECTION_TRANSPORT_CONNECTOR)) {
+            client = JerseyClientBuilder.createClient();
+        }
 
         // pass in jersey parameters from calling code (allows customization of client)
         for (String propName : smartConfig.getProperties().keySet()) {
@@ -159,7 +178,7 @@ public final class SmartClientFactory {
     }
 
     static JerseyClient createApacheClient(SmartConfig smartConfig) {
-        smartConfig.setProperty(CONNECTOR_PROVIDER, "APACHE");
+        smartConfig.setProperty(CONNECTOR_PROVIDER, APACHE_TRANSPORT_CONNECTOR);
 
         ClientConfig clientConfig = new ClientConfig();
 

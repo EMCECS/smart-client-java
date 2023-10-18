@@ -2,14 +2,15 @@ description = 'Smart Client for Jersey 2.x - includes a SmartClientFactory'
 
 dependencies {
     api project(':smart-client-core')
-    implementation 'org.glassfish.jersey.core:jersey-client:2.38'
-    implementation 'org.glassfish.jersey.connectors:jersey-apache-connector:2.38'
-    implementation 'org.glassfish.jersey.inject:jersey-hk2:2.38'
+    implementation 'org.glassfish.jersey.core:jersey-client:2.40'
+    implementation "org.glassfish.jersey.connectors:jersey-apache-connector:2.40"
+    implementation 'org.glassfish.jersey.connectors:jersey-netty-connector:2.40'
+    implementation 'org.glassfish.jersey.inject:jersey-hk2:2.40'
 
     implementation 'org.apache.httpcomponents:httpclient:4.5.14'
-    implementation 'org.glassfish.jersey.media:jersey-media-json-jackson:2.38'
-    implementation 'org.glassfish.jersey.media:jersey-media-json-processing:2.38'
-    implementation 'org.glassfish.jersey.media:jersey-media-jaxb:2.38'
+    implementation 'org.glassfish.jersey.media:jersey-media-json-jackson:2.40'
+    implementation 'org.glassfish.jersey.media:jersey-media-json-processing:2.40'
+    implementation 'org.glassfish.jersey.media:jersey-media-jaxb:2.40'
     implementation 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-xml-provider:2.14.2'
 
     implementation 'org.slf4j:slf4j-api:2.0.6'

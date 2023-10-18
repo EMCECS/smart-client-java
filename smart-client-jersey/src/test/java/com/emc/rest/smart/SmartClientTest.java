@@ -33,7 +33,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;;
+import javax.ws.rs.core.Response;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
@@ -114,9 +114,10 @@ public class SmartClientTest {
         // (no exception when finding a MessageBodyWriter)
         JerseyWebTarget webTarget = client.target(endpoints[0]).path("/rest/namespace/foo");
         JerseyInvocation.Builder invocationBuilder = webTarget.request(MediaType.APPLICATION_JSON);
-        Response response = invocationBuilder.post(Entity.json(data));
+        try (Response response = invocationBuilder.post(Entity.json(data))) {
 
-        Assert.assertTrue(response.getStatus() > 299); // some versions of ECS return 500 instead of 403
+            Assert.assertTrue(response.getStatus() > 299); // some versions of ECS return 500 instead of 403
+        }
     }
 
     @Test
@@ -125,7 +126,7 @@ public class SmartClientTest {
 
         SmartConfig smartConfig = new SmartConfig("8.8.4.4:9020");
 
-        final JerseyClient client = SmartClientFactory.createStandardClient(smartConfig, null);
+        final JerseyClient client = SmartClientFactory.createStandardClient(smartConfig);
         client.property(ClientProperties.CONNECT_TIMEOUT, CONNECTION_TIMEOUT_MILLIS);
 
         Future<?> future = Executors.newSingleThreadExecutor().submit(() -> {
@@ -157,11 +158,13 @@ public class SmartClientTest {
                 .header("x-emc-signature", signature)
                 .buildGet();
 
-        Response response = invocation.invoke(Response.class);
+        String responseStr;
+        try (Response response = invocation.invoke(Response.class)) {
 
-        if (response.getStatus() > 299) throw new RuntimeException("error response: " + response.getStatus());
+            if (response.getStatus() > 299) throw new RuntimeException("error response: " + response.getStatus());
 
-        String responseStr = (String)response.getEntity();
+            responseStr = (String) response.getEntity();
+        }
         if (!responseStr.contains("Atmos")) throw new RuntimeException("unrecognized response string: " + responseStr);
     }
 

@@ -3,8 +3,8 @@ description = 'HostListProvider implementation for ECS'
 dependencies {
     api project(':smart-client-core')
     api project(':smart-client-jersey')
-    implementation 'org.glassfish.jersey.core:jersey-client:2.38'
-    implementation 'org.glassfish.jersey.connectors:jersey-apache-connector:2.38'
+    implementation 'org.glassfish.jersey.core:jersey-client:2.40'
+    implementation 'org.glassfish.jersey.connectors:jersey-apache-connector:2.40'
     implementation 'commons-codec:commons-codec:1.15'
     // jaxb was removed from Java 11 - jaxb dependencies are provided with Java 8
     implementation "javax.xml.bind:jaxb-api:2.3.1"

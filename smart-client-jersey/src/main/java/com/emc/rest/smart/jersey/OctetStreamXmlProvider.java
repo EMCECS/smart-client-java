@@ -21,6 +21,7 @@ import javax.inject.Provider;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Configuration;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
@@ -39,8 +40,8 @@ import java.lang.reflect.Type;
 public class OctetStreamXmlProvider implements MessageBodyReader<Object> {
     private final MessageBodyReader<Object> delegate;
 
-    public OctetStreamXmlProvider(@Context Provider<SAXParserFactory> spf, @Context Providers ps) {
-        this.delegate = new XmlRootElementJaxbProvider.General(spf, ps);
+    public OctetStreamXmlProvider(@Context Provider<SAXParserFactory> spf, @Context Providers ps, @Context Configuration config) {
+        this.delegate = new XmlRootElementJaxbProvider.General(spf, ps, config);
     }
 
     @Override

@@ -1,7 +1,7 @@
 description = 'Smart Client core components - This library has minimal dependencies and provides the core generic logic necesary for client-side intelligent load balancing'
 
 dependencies {
-    implementation 'org.glassfish.jersey.core:jersey-client:2.38'
+    implementation 'org.glassfish.jersey.core:jersey-client:2.40'
     implementation 'org.slf4j:slf4j-api:2.0.6'
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.apache.logging.log4j:log4j-core:2.19.0'
