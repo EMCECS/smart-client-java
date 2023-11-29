@@ -22,6 +22,7 @@ import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.glassfish.jersey.apache.connector.ApacheClientProperties;
 import org.glassfish.jersey.apache.connector.ApacheConnectorProvider;
 import org.glassfish.jersey.client.*;
+import org.glassfish.jersey.client.http.Expect100ContinueFeature;
 import org.glassfish.jersey.jackson.internal.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.glassfish.jersey.message.internal.ByteArrayProvider;
 import org.glassfish.jersey.message.internal.FileProvider;
@@ -108,6 +109,10 @@ public final class SmartClientFactory {
             client = createApacheClient(smartConfig);
         else if (clientTransportConnector.equals(HTTPURLCONNECTION_TRANSPORT_CONNECTOR)) {
             client = JerseyClientBuilder.createClient();
+            System.setProperty("sun.net.http.allowRestrictedHeaders", "true");
+            // Since Jersey 2.32 it is possible to send Expect:100-continue header from Jersey client
+            // DEFAULT_EXPECT_100_CONTINUE_THRESHOLD_SIZE = 65536L
+            client.register(Expect100ContinueFeature.basic());
         }
 
         // pass in jersey parameters from calling code (allows customization of client)
