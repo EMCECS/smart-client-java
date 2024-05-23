@@ -47,6 +47,7 @@ public final class SmartClientFactory {
     public static final int MAX_CONNECTIONS_PER_HOST_DEFAULT = 999;
 
     public static final String IDLE_CONNECTION_MONITOR_PROPERTY_KEY = "com.emc.rest.smart.idleConnectionsExecSvc";
+    public static final String CONNECTION_MANAGER_PROPERTY_KEY = "com.emc.rest.smart.apacheConnectionManager";
 
     public static Client createSmartClient(SmartConfig smartConfig) {
         return createSmartClient(smartConfig, createApacheClientHandler(smartConfig));
@@ -146,6 +147,12 @@ public final class SmartClientFactory {
             sched.shutdownNow();
         }
 
+        org.apache.http.impl.conn.PoolingClientConnectionManager connectionManager = (org.apache.http.impl.conn.PoolingClientConnectionManager)client.getProperties().get(CONNECTION_MANAGER_PROPERTY_KEY);
+        if (connectionManager != null) {
+            log.debug("shutting down connection pool");
+            connectionManager.shutdown();
+        }
+
         log.debug("destroying Jersey client");
         client.destroy();
     }
@@ -161,6 +168,8 @@ public final class SmartClientFactory {
         connectionManager.setDefaultMaxPerRoute(smartConfig.getIntProperty(MAX_CONNECTIONS_PER_HOST, MAX_CONNECTIONS_PER_HOST_DEFAULT));
         connectionManager.setMaxTotal(smartConfig.getIntProperty(MAX_CONNECTIONS, MAX_CONNECTIONS_DEFAULT));
         clientConfig.getProperties().put(ApacheHttpClient4Config.PROPERTY_CONNECTION_MANAGER, connectionManager);
+        // stash connection manager in smartConfig for cleanup later in destroy()
+        smartConfig.getProperties().put(CONNECTION_MANAGER_PROPERTY_KEY, connectionManager);
 
         if (smartConfig.getMaxConnectionIdleTime() > 0) {
             ScheduledExecutorService sched = Executors.newSingleThreadScheduledExecutor();
