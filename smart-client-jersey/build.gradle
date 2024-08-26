@@ -8,6 +8,11 @@ dependencies {
     implementation 'org.apache.httpcomponents:httpclient:4.5.13'
     implementation('com.sun.jersey:jersey-json:1.19.4') {
         exclude group: 'org.codehaus.jackson'
+        constraints {
+            implementation('org.codehaus.jettison:jettison:1.5.4') {
+                because 'previous versions have multiple CVEs'
+            }
+        }
     }
     // NOTE: Jackson 2.13 dropped support for JAX-RS 1.x, and we use Jersey client 1.x, so we are stuck on Jackson 1.12.x
     // ref: https://github.com/FasterXML/jackson-jaxrs-providers/issues/90#issuecomment-1081368194
