@@ -163,7 +163,7 @@ public final class SmartClientFactory {
         // set up multi-threaded connection pool
         // TODO: find a non-deprecated connection manager that works (swapping out with
         //       PoolingHttpClientConnectionManager will break threading)
-        org.apache.http.impl.conn.PoolingClientConnectionManager connectionManager = new org.apache.http.impl.conn.PoolingClientConnectionManager();
+        MyPoolingHttpClientConnectionManager connectionManager = new MyPoolingHttpClientConnectionManager();
         // 999 maximum active connections (max allowed)
         connectionManager.setDefaultMaxPerRoute(smartConfig.getIntProperty(MAX_CONNECTIONS_PER_HOST, MAX_CONNECTIONS_PER_HOST_DEFAULT));
         connectionManager.setMaxTotal(smartConfig.getIntProperty(MAX_CONNECTIONS, MAX_CONNECTIONS_DEFAULT));
