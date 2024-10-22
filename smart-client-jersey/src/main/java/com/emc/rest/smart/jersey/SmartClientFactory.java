@@ -147,10 +147,10 @@ public final class SmartClientFactory {
             sched.shutdownNow();
         }
 
-        org.apache.http.impl.conn.PoolingClientConnectionManager connectionManager = (org.apache.http.impl.conn.PoolingClientConnectionManager)client.getProperties().get(CONNECTION_MANAGER_PROPERTY_KEY);
+        MyPoolingHttpClientConnectionManager connectionManager = (MyPoolingHttpClientConnectionManager) client.getProperties().get(CONNECTION_MANAGER_PROPERTY_KEY);
         if (connectionManager != null) {
             log.debug("shutting down connection pool");
-            connectionManager.shutdown();
+            connectionManager.realShutDown();
         }
 
         log.debug("destroying Jersey client");
