@@ -5,7 +5,7 @@ dependencies {
     api 'com.sun.jersey:jersey-client:1.19.4'
     implementation 'org.slf4j:slf4j-api:1.7.36'
     implementation 'com.sun.jersey.contribs:jersey-apache-client4:1.19.4'
-    implementation 'org.apache.httpcomponents:httpclient:4.5.13'
+    implementation 'org.apache.httpcomponents:httpclient:4.5.14'
     implementation('com.sun.jersey:jersey-json:1.19.4') {
         exclude group: 'org.codehaus.jackson'
         constraints {
