@@ -147,10 +147,10 @@ public final class SmartClientFactory {
             sched.shutdownNow();
         }
 
-        MyPoolingHttpClientConnectionManager connectionManager = (MyPoolingHttpClientConnectionManager) client.getProperties().get(CONNECTION_MANAGER_PROPERTY_KEY);
+        MyPoolingClientConnectionManager connectionManager = (MyPoolingClientConnectionManager) client.getProperties().get(CONNECTION_MANAGER_PROPERTY_KEY);
         if (connectionManager != null) {
             log.debug("shutting down connection pool");
-            connectionManager.realShutDown();
+            connectionManager.shutdown();
         }
 
         log.debug("destroying Jersey client");
@@ -163,7 +163,7 @@ public final class SmartClientFactory {
         // set up multi-threaded connection pool
         // TODO: find a non-deprecated connection manager that works (swapping out with
         //       PoolingHttpClientConnectionManager will break threading)
-        org.apache.http.impl.conn.PoolingClientConnectionManager connectionManager = new org.apache.http.impl.conn.PoolingClientConnectionManager();
+        MyPoolingClientConnectionManager connectionManager = new MyPoolingClientConnectionManager();
         // 999 maximum active connections (max allowed)
         connectionManager.setDefaultMaxPerRoute(smartConfig.getIntProperty(MAX_CONNECTIONS_PER_HOST, MAX_CONNECTIONS_PER_HOST_DEFAULT));
         connectionManager.setMaxTotal(smartConfig.getIntProperty(MAX_CONNECTIONS, MAX_CONNECTIONS_DEFAULT));
