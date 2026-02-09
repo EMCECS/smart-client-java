@@ -18,19 +18,24 @@ package com.emc.rest.smart.jersey;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.SmartClientException;
 import com.emc.rest.smart.SmartConfig;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientRequest;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.filter.ClientFilter;
 
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.HashMap;
+import java.util.Map;
 
-public class SmartFilter extends ClientFilter {
+import javax.ws.rs.client.ClientRequestContext;
+import javax.ws.rs.client.ClientRequestFilter;
+import javax.ws.rs.client.ClientResponseContext;
+import javax.ws.rs.client.ClientResponseFilter;
+
+public class SmartFilter implements ClientRequestFilter, ClientResponseFilter {
     public static final String BYPASS_LOAD_BALANCER = "com.emc.rest.smart.bypassLoadBalancer";
+
+    private static final String REQUEST_HOST_PROPERTY = SmartFilter.class.getName() + ".requestHost";
 
     private final SmartConfig smartConfig;
 
@@ -39,18 +44,23 @@ public class SmartFilter extends ClientFilter {
     }
 
     @Override
-    public ClientResponse handle(ClientRequest request) throws ClientHandlerException {
+    public void filter(ClientRequestContext request) {
         // check for bypass flag
-        Boolean bypass = (Boolean) request.getProperties().get(BYPASS_LOAD_BALANCER);
+        Boolean bypass = (Boolean) request.getProperty(BYPASS_LOAD_BALANCER);
         if (bypass != null && bypass) {
-            return getNext().handle(request);
+            return;
+        }
+
+        Map<String, Object> requestProperties = new HashMap<>();
+        for (String name : request.getPropertyNames()) {
+            requestProperties.put(name, request.getProperty(name));
         }
 
         // get highest ranked host for next request
-        Host host = smartConfig.getLoadBalancer().getTopHost(request.getProperties());
+        Host host = smartConfig.getLoadBalancer().getTopHost(requestProperties);
 
         // replace the host in the request
-        URI uri = request.getURI();
+        URI uri = request.getUri();
         try {
             org.apache.http.HttpHost httpHost = new org.apache.http.HttpHost(host.getName(), uri.getPort(), uri.getScheme());
             // NOTE: flags were added in httpclient 4.5.8 to allow for no normalization (which matches behavior prior to 4.5.7)
@@ -58,29 +68,27 @@ public class SmartFilter extends ClientFilter {
         } catch (URISyntaxException e) {
             throw new RuntimeException("load-balanced host generated invalid URI", e);
         }
-        request.setURI(uri);
+        request.setUri(uri);
+
+        request.setProperty(REQUEST_HOST_PROPERTY, host);
 
         // track requests stats for LB ranking
         host.connectionOpened(); // not really, but we can't (cleanly) intercept any lower than this
-        try {
-            // call to delegate
-            ClientResponse response = getNext().handle(request);
+    }
 
-            // capture request stats
-            // except for 501 (not implemented), all 50x responses are considered server errors
-            host.callComplete(response.getStatus() >= 500 && response.getStatus() != 501);
+    @Override
+    public void filter(ClientRequestContext requestContext, ClientResponseContext responseContext) {
+        Host host = (Host) requestContext.getProperty(REQUEST_HOST_PROPERTY);
+        if (host == null) return;
 
-            // wrap the input stream so we can capture the actual connection close
-            response.setEntityInputStream(new WrappedInputStream(response.getEntityInputStream(), host));
+        // capture request stats
+        // except for 501 (not implemented), all 50x responses are considered server errors
+        host.callComplete(responseContext.getStatus() >= 500 && responseContext.getStatus() != 501);
 
-            return response;
-        } catch (RuntimeException e) {
-            // capture requests stats (error)
-            boolean isServerError = e instanceof SmartClientException && ((SmartClientException) e).isServerError();
-            host.callComplete(isServerError);
-            host.connectionClosed();
-
-            throw e;
+        // wrap the input stream so we can capture the actual connection close
+        InputStream entityStream = responseContext.getEntityStream();
+        if (entityStream != null) {
+            responseContext.setEntityStream(new WrappedInputStream(entityStream, host));
         }
     }
 

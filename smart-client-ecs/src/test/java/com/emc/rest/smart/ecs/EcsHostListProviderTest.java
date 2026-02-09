@@ -17,19 +17,15 @@ package com.emc.rest.smart.ecs;
 
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.SmartConfig;
+import com.emc.rest.smart.jersey.SmartClientFactory;
 import com.emc.util.TestConfig;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.config.ClientConfig;
-import com.sun.jersey.api.client.config.DefaultClientConfig;
-import com.sun.jersey.client.apache4.ApacheHttpClient4;
-import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
-import org.apache.http.client.HttpClient;
 import org.apache.http.impl.conn.PoolingClientConnectionManager;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.ws.rs.client.Client;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
@@ -51,6 +47,8 @@ public class EcsHostListProviderTest {
     private URI serverURI;
     private Client client;
     private EcsHostListProvider hostListProvider;
+    private PoolingClientConnectionManager connectionManager;
+    private SmartConfig smartConfig;
 
     @Before
     public void before() throws Exception {
@@ -61,12 +59,10 @@ public class EcsHostListProviderTest {
         String secret = TestConfig.getPropertyNotEmpty(properties, S3_SECRET_KEY);
         String proxyUri = properties.getProperty(PROXY_URI);
 
-        ClientConfig clientConfig = new DefaultClientConfig();
-        clientConfig.getProperties().put(ApacheHttpClient4Config.PROPERTY_CONNECTION_MANAGER, new PoolingClientConnectionManager());
-        if (proxyUri != null) clientConfig.getProperties().put(ApacheHttpClient4Config.PROPERTY_PROXY_URI, proxyUri);
-        client = ApacheHttpClient4.create(clientConfig);
-
-        SmartConfig smartConfig = new SmartConfig(serverURI.getHost());
+        smartConfig = new SmartConfig(serverURI.getHost());
+        if (proxyUri != null) smartConfig.setProxyUri(new URI(proxyUri));
+        client = SmartClientFactory.createStandardClient(smartConfig);
+        connectionManager = (PoolingClientConnectionManager) smartConfig.getProperties().get(SmartClientFactory.CONNECTION_MANAGER_PROPERTY_KEY);
 
         hostListProvider = new EcsHostListProvider(client, smartConfig.getLoadBalancer(), user, secret);
         hostListProvider.setProtocol(serverURI.getScheme());
@@ -90,8 +86,7 @@ public class EcsHostListProviderTest {
     @Test
     public void testNoKeepAlive() {
         // verify client has no open connections
-        HttpClient httpClient = ((ApacheHttpClient4) client).getClientHandler().getHttpClient();
-        PoolingClientConnectionManager connectionManager = (PoolingClientConnectionManager) httpClient.getConnectionManager();
+        Assert.assertNotNull(connectionManager);
         Assert.assertEquals(0, connectionManager.getTotalStats().getAvailable());
         Assert.assertEquals(0, connectionManager.getTotalStats().getLeased());
         Assert.assertEquals(0, connectionManager.getTotalStats().getPending());
@@ -161,8 +156,9 @@ public class EcsHostListProviderTest {
     public void testPing() {
         String portStr = serverURI.getPort() > 0 ? ":" + serverURI.getPort() : "";
 
-        PingResponse response = client.resource(
+        PingResponse response = client.target(
                 String.format("%s://%s%s/?ping", serverURI.getScheme(), serverURI.getHost(), portStr))
+                .request()
                 .header("x-emc-namespace", "foo").get(PingResponse.class);
         Assert.assertNotNull(response);
         Assert.assertEquals(PingItem.Status.OFF, response.getPingItemMap().get(PingItem.MAINTENANCE_MODE).getStatus());

@@ -16,7 +16,6 @@
 package com.emc.rest.smart.jersey;
 
 import com.emc.rest.util.SizedInputStream;
-import com.sun.jersey.core.util.ReaderWriter;
 
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
@@ -42,6 +41,10 @@ public class SizedInputStreamWriter implements MessageBodyWriter<SizedInputStrea
 
     @Override
     public void writeTo(SizedInputStream sizedInputStream, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream) throws IOException, WebApplicationException {
-        ReaderWriter.writeTo(sizedInputStream, entityStream);
+        byte[] buffer = new byte[64 * 1024];
+        int read;
+        while ((read = sizedInputStream.read(buffer)) != -1) {
+            entityStream.write(buffer, 0, read);
+        }
     }
 }
