@@ -19,10 +19,9 @@ plugins {
     id 'idea'
     id 'eclipse'
     id 'java'
-    id 'net.saliman.cobertura' version '4.0.0' apply false
-    id 'com.github.jk1.dependency-license-report' version '1.17' apply false
-    id 'org.ajoberstar.git-publish' version '3.0.1'
-    id 'nebula.release' version '15.3.1'
+    id 'com.github.jk1.dependency-license-report' version '2.9' apply false
+    id 'org.ajoberstar.git-publish' version '4.2.2'
+    id 'nebula.release' version '21.0.0'
 }
 
 // name of the github project repository
@@ -39,11 +38,11 @@ ext.licenseUrl = 'https://www.apache.org/licenses/'
 
 subprojects {
     apply plugin: 'java-library'
-    apply plugin: 'net.saliman.cobertura'
+    apply plugin: 'jacoco'
     apply plugin: 'com.github.jk1.dependency-license-report'
     apply plugin: 'distribution'
     apply plugin: 'signing'
-    apply plugin: 'maven'
+    apply plugin: 'maven-publish'
 
     group 'com.emc.ecs'
 
@@ -60,42 +59,9 @@ subprojects {
 
     [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
-    sourceCompatibility = 1.8
-
-    def projectPom = {
-        project {
-            name project.name
-            description project.description
-            url githubProjectUrl
-
-            scm {
-                url githubProjectUrl
-                connection githubScmUrl
-                developerConnection githubScmUrl
-            }
-
-            licenses {
-                license {
-                    name licenseName
-                    url licenseUrl
-                    distribution 'repo'
-                }
-            }
-
-            developers {
-                developer {
-                    id 'EMCECS'
-                    name 'Dell EMC ECS'
-                }
-            }
-        }
-    }
-
-    task writePom {
-        ext.pomFile = file("$buildDir/pom.xml")
-        outputs.file pomFile
-        doLast {
-            pom(projectPom).writeTo pomFile
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(25)
         }
     }
 
@@ -103,11 +69,8 @@ subprojects {
         doFirst {
             manifest {
                 attributes 'Implementation-Version': project.version,
-                        'Class-Path': configurations.runtime.collect { it.getName() }.join(' ')
+                        'Class-Path': configurations.runtimeClasspath.collect { it.getName() }.join(' ')
             }
-        }
-        into("META-INF/maven/$project.group/$project.name") {
-            from writePom
         }
     }
 
@@ -117,13 +80,63 @@ subprojects {
 
     task javadocJar(type: Jar) {
         archiveClassifier = 'javadoc'
-        from "${docsDir}/javadoc"
+        from javadoc
     }
-    tasks.javadocJar.dependsOn javadoc
 
     task sourcesJar(type: Jar) {
         archiveClassifier = 'sources'
         from sourceSets.main.allSource
+    }
+
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                from components.java
+                artifact sourcesJar
+                artifact javadocJar
+                pom {
+                    name = project.name
+                    description = project.description
+                    url = githubProjectUrl
+
+                    scm {
+                        url = githubProjectUrl
+                        connection = githubScmUrl
+                        developerConnection = githubScmUrl
+                    }
+
+                    licenses {
+                        license {
+                            name = licenseName
+                            url = licenseUrl
+                            distribution = 'repo'
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id = 'EMCECS'
+                            name = 'Dell EMC ECS'
+                        }
+                    }
+                }
+            }
+        }
+        repositories {
+            maven {
+                url = 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+                credentials {
+                    username = project.hasProperty('sonatypeUser') ? project.sonatypeUser : ''
+                    password = project.hasProperty('sonatypePass') ? project.sonatypePass : ''
+                }
+            }
+        }
+    }
+
+    jar {
+        into("META-INF/maven/$project.group/$project.name") {
+            from { generatePomFileForMavenJavaPublication }
+        }
     }
 
     artifacts {
@@ -157,22 +170,8 @@ subprojects {
     }
 
     signing {
-        required { gradle.taskGraph.hasTask(uploadJars) }
-        sign configurations.jars
-    }
-
-    uploadJars {
-        repositories {
-            mavenDeployer {
-                beforeDeployment { deployment -> signing.signPom(deployment) }
-
-                repository(url: 'https://oss.sonatype.org/service/local/staging/deploy/maven2/') {
-                    authentication(userName: '', password: '')
-                }
-
-                pom projectPom
-            }
-        }
+        required { gradle.taskGraph.hasTask('publish') }
+        sign publishing.publications.mavenJava
     }
 
     // allow typing in credentials
@@ -180,7 +179,7 @@ subprojects {
     //       if that's not possible, it's best to read passwords into env. variables and set these properties on the gradle
     //       command line ( -PsigningPass="${SIGNING_PASS}" -PsonatypePass="${SONATYPE_PASS}" )
     gradle.taskGraph.whenReady { taskGraph ->
-        if (taskGraph.hasTask(uploadJars)) {
+        if (taskGraph.hasTask('publish')) {
             if (!rootProject.hasProperty('signingSecretKeyRingFile'))
                 rootProject.ext.signingSecretKeyRingFile = new String(System.console().readLine('\nSecret key ring file: '))
             if (!rootProject.hasProperty('signingKeyId'))
@@ -194,8 +193,6 @@ subprojects {
             ext.'signing.keyId' = rootProject.ext.signingKeyId
             ext.'signing.secretKeyRingFile' = rootProject.ext.signingSecretKeyRingFile
             ext.'signing.password' = rootProject.ext.signingPass
-            uploadJars.repositories.mavenDeployer.repository.authentication.userName = rootProject.ext.sonatypeUser
-            uploadJars.repositories.mavenDeployer.repository.authentication.password = rootProject.ext.sonatypePass
         }
     }
 }
@@ -231,7 +228,7 @@ gitPublish {
 }
 tasks.gitPublishPush.dependsOn aggregateDocs
 
-tasks.release.dependsOn subprojects.test, subprojects.uploadJars, gitPublishPush, subprojects.distZip
+tasks.release.dependsOn subprojects.test, subprojects.publish, gitPublishPush, subprojects.distZip
 
 clean {
     delete aggregatedDocsDir

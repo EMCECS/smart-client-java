@@ -18,8 +18,8 @@ package com.emc.rest.smart.ecs;
 import com.emc.rest.smart.Host;
 import com.emc.rest.smart.HostListProvider;
 import com.emc.rest.smart.LoadBalancer;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.WebResource;
+import jakarta.ws.rs.client.Client;
+import jakarta.ws.rs.client.WebTarget;
 import org.apache.commons.codec.binary.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,7 +90,8 @@ public class EcsHostListProvider implements HostListProvider {
     @Override
     public void runHealthCheck(Host host) {
         // header is workaround for STORAGE-1833
-        PingResponse response = client.resource(getRequestUri(host, "/?ping"))
+        PingResponse response = client.target(getRequestUri(host, "/?ping"))
+                .request()
                 .header("x-emc-namespace", "x")
                 .header("Connection", "close") // make sure maintenance calls are not kept alive
                 .get(PingResponse.class);
@@ -107,7 +108,7 @@ public class EcsHostListProvider implements HostListProvider {
 
     @Override
     public void destroy() {
-        client.destroy();
+        client.close();
     }
 
     protected List<Host> getDataNodes(Host host) {
@@ -129,18 +130,15 @@ public class EcsHostListProvider implements HostListProvider {
             throw new RuntimeException("could not generate signature", e);
         }
 
-        // construct request
-        WebResource.Builder request = client.resource(uri).getRequestBuilder();
-
-        // add date and auth headers
-        request.header("Date", rfcDate);
-        request.header("Authorization", "AWS " + user + ":" + signature);
-        // make sure maintenance calls are not kept alive
-        request.header("Connection", "close");
-
-        // make REST call
+        // construct request and make REST call
         log.debug("retrieving VDC node list from {}", host.getName());
-        List<String> dataNodes = request.get(ListDataNode.class).getDataNodes();
+        List<String> dataNodes = client.target(uri)
+                .request()
+                .header("Date", rfcDate)
+                .header("Authorization", "AWS " + user + ":" + signature)
+                .header("Connection", "close")
+                .get(ListDataNode.class)
+                .getDataNodes();
 
         List<Host> hosts = new ArrayList<>();
         for (String node : dataNodes) {

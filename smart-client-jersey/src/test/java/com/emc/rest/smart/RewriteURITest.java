@@ -15,10 +15,10 @@
  */
 package com.emc.rest.smart;
 
-import org.apache.http.HttpHost;
-import org.apache.http.client.utils.URIUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.hc.core5.http.HttpHost;
+import org.apache.hc.client5.http.utils.URIUtils;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.net.URI;
 
@@ -53,8 +53,8 @@ public class RewriteURITest {
 
     private void testApacheRewritePath(String path) throws Exception {
         URI uri = new URI(TEST_SCHEME, null, TEST_HOST_1, TEST_PORT, path, null, null);
-        // NOTE: flags were added in httpclient 4.5.8 to allow for no normalization (which matches behavior prior to 4.5.7)
-        uri = URIUtils.rewriteURI(uri, new HttpHost(TEST_HOST_2, TEST_PORT, TEST_SCHEME), URIUtils.NO_FLAGS);
-        Assert.assertEquals(path, uri.getPath());
+        // NOTE: HttpClient 5 URIUtils.rewriteURI behavior
+        uri = URIUtils.rewriteURI(uri, new HttpHost(TEST_SCHEME, TEST_HOST_2, TEST_PORT));
+        assertEquals(path, uri.getPath());
     }
 }

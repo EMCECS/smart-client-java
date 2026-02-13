@@ -15,12 +15,12 @@
  */
 package com.emc.rest.smart.ecs;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
+import jakarta.xml.bind.JAXBContext;
+import jakarta.xml.bind.Marshaller;
+import jakarta.xml.bind.Unmarshaller;
 import java.io.StringReader;
 import java.io.StringWriter;
 
@@ -49,14 +49,14 @@ public class ListDataNodeTest {
         Unmarshaller unmarshaller = context.createUnmarshaller();
         ListDataNode unmarshalledObject = (ListDataNode) unmarshaller.unmarshal(new StringReader(xml));
 
-        Assert.assertEquals(listDataNode.getDataNodes(), unmarshalledObject.getDataNodes());
-        Assert.assertEquals(listDataNode.getVersionInfo(), unmarshalledObject.getVersionInfo());
+        assertEquals(listDataNode.getDataNodes(), unmarshalledObject.getDataNodes());
+        assertEquals(listDataNode.getVersionInfo(), unmarshalledObject.getVersionInfo());
 
         // marshall and compare XML
         Marshaller marshaller = context.createMarshaller();
         StringWriter writer = new StringWriter();
         marshaller.marshal(listDataNode, writer);
 
-        Assert.assertEquals(xml, writer.toString());
+        assertEquals(xml, writer.toString());
     }
 }
