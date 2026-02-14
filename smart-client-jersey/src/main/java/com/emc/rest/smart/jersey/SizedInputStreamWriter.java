@@ -15,18 +15,18 @@
  */
 package com.emc.rest.smart.jersey;
 
-import com.emc.rest.util.SizedInputStream;
-import com.sun.jersey.core.util.ReaderWriter;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Type;
 
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.ext.MessageBodyWriter;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Type;
+
+import com.emc.rest.util.SizedInputStream;
 
 @Produces({"application/octet-stream", "*/*"})
 public class SizedInputStreamWriter implements MessageBodyWriter<SizedInputStream> {
@@ -42,6 +42,10 @@ public class SizedInputStreamWriter implements MessageBodyWriter<SizedInputStrea
 
     @Override
     public void writeTo(SizedInputStream sizedInputStream, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream) throws IOException, WebApplicationException {
-        ReaderWriter.writeTo(sizedInputStream, entityStream);
+        byte[] buffer = new byte[8192];
+        int bytesRead;
+        while ((bytesRead = sizedInputStream.read(buffer)) != -1) {
+            entityStream.write(buffer, 0, bytesRead);
+        }
     }
 }

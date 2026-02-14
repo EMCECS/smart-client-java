@@ -15,15 +15,12 @@
  */
 package com.emc.rest.smart.jersey;
 
-import com.sun.jersey.core.impl.provider.entity.ByteArrayProvider;
-import com.sun.jersey.core.impl.provider.entity.FileProvider;
-import com.sun.jersey.core.impl.provider.entity.InputStreamProvider;
-
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.ext.MessageBodyWriter;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.annotation.Annotation;
@@ -67,7 +64,7 @@ public class SizeOverrideWriter<T> implements MessageBodyWriter<T> {
 
     @Produces({"application/octet-stream", "*/*"})
     public static class ByteArray extends SizeOverrideWriter<byte[]> {
-        private static final ByteArrayProvider delegate = new ByteArrayProvider();
+        private static final MessageBodyWriter<byte[]> delegate = new ByteArrayWriter();
 
         public ByteArray() {
             super(delegate);
@@ -76,7 +73,7 @@ public class SizeOverrideWriter<T> implements MessageBodyWriter<T> {
 
     @Produces({"application/octet-stream", "*/*"})
     public static class File extends SizeOverrideWriter<java.io.File> {
-        private static final FileProvider delegate = new FileProvider();
+        private static final MessageBodyWriter<java.io.File> delegate = new FileWriter();
 
         public File() {
             super(delegate);
@@ -85,7 +82,7 @@ public class SizeOverrideWriter<T> implements MessageBodyWriter<T> {
 
     @Produces({"application/octet-stream", "*/*"})
     public static class InputStream extends SizeOverrideWriter<java.io.InputStream> {
-        private static final InputStreamProvider delegate = new InputStreamProvider();
+        private static final MessageBodyWriter<java.io.InputStream> delegate = new InputStreamWriter();
 
         public InputStream() {
             super(delegate);
@@ -98,6 +95,67 @@ public class SizeOverrideWriter<T> implements MessageBodyWriter<T> {
 
         public SizedInputStream() {
             super(delegate);
+        }
+    }
+
+    private static class ByteArrayWriter implements MessageBodyWriter<byte[]> {
+        @Override
+        public boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
+            return type == byte[].class;
+        }
+
+        @Override
+        public long getSize(byte[] bytes, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
+            return bytes.length;
+        }
+
+        @Override
+        public void writeTo(byte[] bytes, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream) throws IOException, WebApplicationException {
+            entityStream.write(bytes);
+        }
+    }
+
+    private static class FileWriter implements MessageBodyWriter<java.io.File> {
+        @Override
+        public boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
+            return java.io.File.class.isAssignableFrom(type);
+        }
+
+        @Override
+        public long getSize(java.io.File file, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
+            return file.length();
+        }
+
+        @Override
+        public void writeTo(java.io.File file, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream) throws IOException, WebApplicationException {
+            try (FileInputStream fis = new FileInputStream(file)) {
+                byte[] buffer = new byte[8192];
+                int bytesRead;
+                while ((bytesRead = fis.read(buffer)) != -1) {
+                    entityStream.write(buffer, 0, bytesRead);
+                }
+            }
+        }
+    }
+
+    private static class InputStreamWriter implements MessageBodyWriter<java.io.InputStream> {
+        @Override
+        public boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
+            return java.io.InputStream.class.isAssignableFrom(type);
+        }
+
+        @Override
+        public long getSize(java.io.InputStream inputStream, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
+            return -1;
+        }
+
+        @Override
+        public void writeTo(java.io.InputStream inputStream, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream) throws IOException, WebApplicationException {
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                entityStream.write(buffer, 0, bytesRead);
+            }
         }
     }
 }

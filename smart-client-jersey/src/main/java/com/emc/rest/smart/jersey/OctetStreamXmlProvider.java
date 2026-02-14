@@ -15,33 +15,30 @@
  */
 package com.emc.rest.smart.jersey;
 
-import com.sun.jersey.core.impl.provider.entity.XMLRootElementProvider;
-import com.sun.jersey.spi.inject.Injectable;
-
-import javax.ws.rs.Consumes;
-import javax.ws.rs.Produces;
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.ext.MessageBodyReader;
-import javax.ws.rs.ext.Providers;
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlType;
-import javax.xml.parsers.SAXParserFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import javax.ws.rs.Consumes;
+import javax.ws.rs.Produces;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.ext.MessageBodyReader;
+
+import jakarta.xml.bind.JAXBContext;
+import jakarta.xml.bind.JAXBException;
+import jakarta.xml.bind.Unmarshaller;
+import jakarta.xml.bind.annotation.XmlRootElement;
+import jakarta.xml.bind.annotation.XmlType;
 
 @Produces("application/octet-stream")
 @Consumes("application/octet-stream")
 public class OctetStreamXmlProvider implements MessageBodyReader<Object> {
-    private final MessageBodyReader<Object> delegate;
-
-    public OctetStreamXmlProvider(@Context Injectable<SAXParserFactory> spf, @Context Providers ps) {
-        this.delegate = new XMLRootElementProvider.General(spf, ps);
-    }
+    private final Map<Class<?>, JAXBContext> contexts = new ConcurrentHashMap<>();
 
     @Override
     public boolean isReadable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
@@ -50,7 +47,21 @@ public class OctetStreamXmlProvider implements MessageBodyReader<Object> {
     }
 
     @Override
-    public Object readFrom(Class<Object> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, String> httpHeaders, InputStream entityStream) throws IOException, WebApplicationException {
-        return delegate.readFrom(type, genericType, annotations, mediaType, httpHeaders, entityStream);
+    public Object readFrom(Class<Object> type, Type genericType, Annotation[] annotations, MediaType mediaType, 
+                          MultivaluedMap<String, String> httpHeaders, InputStream entityStream) 
+            throws IOException, WebApplicationException {
+        try {
+            JAXBContext context = contexts.computeIfAbsent(type, t -> {
+                try {
+                    return JAXBContext.newInstance(t);
+                } catch (JAXBException e) {
+                    throw new RuntimeException("Failed to create JAXB context for " + t, e);
+                }
+            });
+            Unmarshaller unmarshaller = context.createUnmarshaller();
+            return unmarshaller.unmarshal(entityStream);
+        } catch (JAXBException e) {
+            throw new WebApplicationException("Failed to unmarshal XML", e);
+        }
     }
 }

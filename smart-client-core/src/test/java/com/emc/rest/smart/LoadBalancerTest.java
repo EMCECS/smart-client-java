@@ -19,8 +19,8 @@ import com.emc.rest.util.RequestSimulator;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogMF;
 import org.apache.log4j.Logger;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,12 +46,12 @@ public class LoadBalancerTest {
         RequestSimulator simulator = new RequestSimulator(loadBalancer, callCount);
         simulator.run();
 
-        Assert.assertEquals("errors during call simulation", 0, simulator.getErrors().size());
+        assertEquals(0, simulator.getErrors().size(), "errors during call simulation");
 
         l4j.info(Arrays.toString(loadBalancer.getHostStats()));
 
         for (HostStats stats : loadBalancer.getHostStats()) {
-            Assert.assertTrue("unbalanced call count", Math.abs(callCount / hostList.length - stats.getTotalConnections()) <= 3);
+            assertTrue(Math.abs(callCount / hostList.length - stats.getTotalConnections()) <= 3, "unbalanced call count");
         }
     }
 
@@ -86,7 +86,7 @@ public class LoadBalancerTest {
         LogMF.warn(l4j, "per call overhead: {0}µs", perCallOverhead / 1000);
         hostLogger.setLevel(logLevel);
 
-        Assert.assertTrue("call overhead too high", perCallOverhead < 100000); // must be less than .1ms
+        assertTrue(perCallOverhead < 100000, "call overhead too high"); // must be less than .1ms
     }
 
     static class LBOverheadTask implements Callable<Long> {
