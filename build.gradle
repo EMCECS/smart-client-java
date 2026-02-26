@@ -19,10 +19,10 @@ plugins {
     id 'idea'
     id 'eclipse'
     id 'java'
-    id 'net.saliman.cobertura' version '4.0.0' apply false
-    id 'com.github.jk1.dependency-license-report' version '1.17' apply false
-    id 'org.ajoberstar.git-publish' version '3.0.1'
-    id 'nebula.release' version '15.3.1'
+    id 'jacoco'
+    id 'com.github.jk1.dependency-license-report' version '3.0.1' apply false
+    id 'org.ajoberstar.git-publish' version '5.1.2'
+    id 'nebula.release' version '21.0.0'
 }
 
 // name of the github project repository
@@ -39,11 +39,11 @@ ext.licenseUrl = 'https://www.apache.org/licenses/'
 
 subprojects {
     apply plugin: 'java-library'
-    apply plugin: 'net.saliman.cobertura'
+    apply plugin: 'jacoco'
     apply plugin: 'com.github.jk1.dependency-license-report'
     apply plugin: 'distribution'
     apply plugin: 'signing'
-    apply plugin: 'maven'
+    apply plugin: 'maven-publish'
 
     group 'com.emc.ecs'
 
@@ -54,61 +54,11 @@ subprojects {
         mavenLocal()
     }
 
-    configurations {
-        jars.extendsFrom(signatures)
-    }
-
     [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
-    sourceCompatibility = 1.8
-
-    def projectPom = {
-        project {
-            name project.name
-            description project.description
-            url githubProjectUrl
-
-            scm {
-                url githubProjectUrl
-                connection githubScmUrl
-                developerConnection githubScmUrl
-            }
-
-            licenses {
-                license {
-                    name licenseName
-                    url licenseUrl
-                    distribution 'repo'
-                }
-            }
-
-            developers {
-                developer {
-                    id 'EMCECS'
-                    name 'Dell EMC ECS'
-                }
-            }
-        }
-    }
-
-    task writePom {
-        ext.pomFile = file("$buildDir/pom.xml")
-        outputs.file pomFile
-        doLast {
-            pom(projectPom).writeTo pomFile
-        }
-    }
-
-    jar {
-        doFirst {
-            manifest {
-                attributes 'Implementation-Version': project.version,
-                        'Class-Path': configurations.runtime.collect { it.getName() }.join(' ')
-            }
-        }
-        into("META-INF/maven/$project.group/$project.name") {
-            from writePom
-        }
+    java {
+        sourceCompatibility = JavaVersion.VERSION_25
+        targetCompatibility = JavaVersion.VERSION_25
     }
 
     javadoc {
@@ -117,7 +67,7 @@ subprojects {
 
     task javadocJar(type: Jar) {
         archiveClassifier = 'javadoc'
-        from "${docsDir}/javadoc"
+        from javadoc.destinationDir
     }
     tasks.javadocJar.dependsOn javadoc
 
@@ -126,14 +76,67 @@ subprojects {
         from sourceSets.main.allSource
     }
 
-    artifacts {
-        jars jar
-        jars javadocJar
-        jars sourcesJar
+    jar {
+        doFirst {
+            manifest {
+                attributes 'Implementation-Version': project.version,
+                        'Class-Path': configurations.runtimeClasspath.collect { it.getName() }.join(' ')
+            }
+        }
     }
 
-    // remove zips and tars from "install" task
-    configurations.archives.artifacts.removeAll {it.file =~ /(zip|tar)$/}
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                from components.java
+                artifact sourcesJar
+                artifact javadocJar
+
+                pom {
+                    name = project.name
+                    description = project.description
+                    url = githubProjectUrl
+
+                    scm {
+                        url = githubProjectUrl
+                        connection = githubScmUrl
+                        developerConnection = githubScmUrl
+                    }
+
+                    licenses {
+                        license {
+                            name = licenseName
+                            url = licenseUrl
+                            distribution = 'repo'
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id = 'EMCECS'
+                            name = 'Dell EMC ECS'
+                        }
+                    }
+                }
+            }
+        }
+
+        repositories {
+            maven {
+                name = 'sonatype'
+                url = 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+                credentials {
+                    username = findProperty('sonatypeUser') ?: ''
+                    password = findProperty('sonatypePass') ?: ''
+                }
+            }
+        }
+    }
+
+    signing {
+        required { gradle.taskGraph.hasTask('publish') }
+        sign publishing.publications.mavenJava
+    }
 
     licenseReport {
         renderers = [new InventoryHtmlReportRenderer()]
@@ -142,7 +145,9 @@ subprojects {
     distributions {
         main {
             contents {
-                from configurations.jars.artifacts.files
+                from jar
+                from javadocJar
+                from sourcesJar
                 from('.') {
                     include '*.txt'
                 }
@@ -156,31 +161,12 @@ subprojects {
         }
     }
 
-    signing {
-        required { gradle.taskGraph.hasTask(uploadJars) }
-        sign configurations.jars
-    }
-
-    uploadJars {
-        repositories {
-            mavenDeployer {
-                beforeDeployment { deployment -> signing.signPom(deployment) }
-
-                repository(url: 'https://oss.sonatype.org/service/local/staging/deploy/maven2/') {
-                    authentication(userName: '', password: '')
-                }
-
-                pom projectPom
-            }
-        }
-    }
-
     // allow typing in credentials
     // note: this only works when run without the Gradle daemon (--no-daemon).
     //       if that's not possible, it's best to read passwords into env. variables and set these properties on the gradle
     //       command line ( -PsigningPass="${SIGNING_PASS}" -PsonatypePass="${SONATYPE_PASS}" )
     gradle.taskGraph.whenReady { taskGraph ->
-        if (taskGraph.hasTask(uploadJars)) {
+        if (taskGraph.hasTask('publish')) {
             if (!rootProject.hasProperty('signingSecretKeyRingFile'))
                 rootProject.ext.signingSecretKeyRingFile = new String(System.console().readLine('\nSecret key ring file: '))
             if (!rootProject.hasProperty('signingKeyId'))
@@ -194,26 +180,24 @@ subprojects {
             ext.'signing.keyId' = rootProject.ext.signingKeyId
             ext.'signing.secretKeyRingFile' = rootProject.ext.signingSecretKeyRingFile
             ext.'signing.password' = rootProject.ext.signingPass
-            uploadJars.repositories.mavenDeployer.repository.authentication.userName = rootProject.ext.sonatypeUser
-            uploadJars.repositories.mavenDeployer.repository.authentication.password = rootProject.ext.sonatypePass
         }
     }
 }
 
-ext.aggregatedDocsDir = "$buildDir/aggregatedDocs"
+ext.aggregatedDocsDir = "${layout.buildDirectory.get().asFile}/aggregatedDocs"
 task aggregateDocs {
     doLast {
         if (project.hasProperty('release.stage') && project.ext['release.stage'] == 'final') {
             subprojects.each { sp ->
                 copy {
-                    from sp.docsDir
+                    from sp.javadoc.destinationDir
                     into "${aggregatedDocsDir}/${sp.name}/latest"
                 }
             }
         }
         subprojects.each {sp ->
             copy {
-                from sp.docsDir
+                from sp.javadoc.destinationDir
                 into "${aggregatedDocsDir}/${sp.name}/${sp.version}"
             }
         }
@@ -231,7 +215,7 @@ gitPublish {
 }
 tasks.gitPublishPush.dependsOn aggregateDocs
 
-tasks.release.dependsOn subprojects.test, subprojects.uploadJars, gitPublishPush, subprojects.distZip
+tasks.release.dependsOn subprojects.test, gitPublishPush, subprojects.distZip
 
 clean {
     delete aggregatedDocsDir

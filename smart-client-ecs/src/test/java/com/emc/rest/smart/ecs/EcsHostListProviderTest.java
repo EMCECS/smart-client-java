@@ -15,24 +15,6 @@
  */
 package com.emc.rest.smart.ecs;
 
-import com.emc.rest.smart.Host;
-import com.emc.rest.smart.SmartConfig;
-import com.emc.util.TestConfig;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.config.ClientConfig;
-import com.sun.jersey.api.client.config.DefaultClientConfig;
-import com.sun.jersey.client.apache4.ApacheHttpClient4;
-import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
-import org.apache.http.client.HttpClient;
-import org.apache.http.impl.conn.PoolingClientConnectionManager;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.URI;
@@ -40,6 +22,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.TreeMap;
+
+import javax.ws.rs.client.Client;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.Marshaller;
+import javax.xml.bind.Unmarshaller;
+
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import com.emc.rest.smart.Host;
+import com.emc.rest.smart.SmartConfig;
+import com.emc.rest.smart.jersey.SmartClientFactory;
+import com.emc.util.TestConfig;
 
 public class EcsHostListProviderTest {
     public static final String S3_ENDPOINT = "s3.endpoint";
@@ -52,7 +50,7 @@ public class EcsHostListProviderTest {
     private Client client;
     private EcsHostListProvider hostListProvider;
 
-    @Before
+    @BeforeEach
     public void before() throws Exception {
         Properties properties = TestConfig.getProperties();
 
@@ -61,19 +59,16 @@ public class EcsHostListProviderTest {
         String secret = TestConfig.getPropertyNotEmpty(properties, S3_SECRET_KEY);
         String proxyUri = properties.getProperty(PROXY_URI);
 
-        ClientConfig clientConfig = new DefaultClientConfig();
-        clientConfig.getProperties().put(ApacheHttpClient4Config.PROPERTY_CONNECTION_MANAGER, new PoolingClientConnectionManager());
-        if (proxyUri != null) clientConfig.getProperties().put(ApacheHttpClient4Config.PROPERTY_PROXY_URI, proxyUri);
-        client = ApacheHttpClient4.create(clientConfig);
-
         SmartConfig smartConfig = new SmartConfig(serverURI.getHost());
+        if (proxyUri != null) smartConfig.setProperty(org.glassfish.jersey.client.ClientProperties.PROXY_URI, proxyUri);
+        client = SmartClientFactory.createStandardClient(smartConfig);
 
         hostListProvider = new EcsHostListProvider(client, smartConfig.getLoadBalancer(), user, secret);
         hostListProvider.setProtocol(serverURI.getScheme());
         hostListProvider.setPort(serverURI.getPort());
     }
 
-    @After
+    @AfterEach
     public void after() {
         if (hostListProvider != null) hostListProvider.destroy();
     }
@@ -82,7 +77,7 @@ public class EcsHostListProviderTest {
     public void testEcsHostListProvider() {
         List<Host> hostList = hostListProvider.getHostList();
 
-        Assert.assertTrue("server list is empty", hostList.size() > 0);
+        Assertions.assertTrue(hostList.size() > 0, "server list is empty");
     }
 
     // intended to make sure we do not keep connections alive for any maintenance-related calls
@@ -90,19 +85,20 @@ public class EcsHostListProviderTest {
     @Test
     public void testNoKeepAlive() {
         // verify client has no open connections
-        HttpClient httpClient = ((ApacheHttpClient4) client).getClientHandler().getHttpClient();
-        PoolingClientConnectionManager connectionManager = (PoolingClientConnectionManager) httpClient.getConnectionManager();
-        Assert.assertEquals(0, connectionManager.getTotalStats().getAvailable());
-        Assert.assertEquals(0, connectionManager.getTotalStats().getLeased());
-        Assert.assertEquals(0, connectionManager.getTotalStats().getPending());
+        PoolingHttpClientConnectionManager connectionManager = (PoolingHttpClientConnectionManager)
+                client.getConfiguration().getProperty(SmartClientFactory.CONNECTION_MANAGER_PROPERTY_KEY);
+        Assertions.assertNotNull(connectionManager, "connection manager not found");
+        Assertions.assertEquals(0, connectionManager.getTotalStats().getAvailable());
+        Assertions.assertEquals(0, connectionManager.getTotalStats().getLeased());
+        Assertions.assertEquals(0, connectionManager.getTotalStats().getPending());
 
         // ?endpoint call
         List<Host> hosts = hostListProvider.getHostList();
 
         // verify client still has no open connections
-        Assert.assertEquals(0, connectionManager.getTotalStats().getAvailable());
-        Assert.assertEquals(0, connectionManager.getTotalStats().getLeased());
-        Assert.assertEquals(0, connectionManager.getTotalStats().getPending());
+        Assertions.assertEquals(0, connectionManager.getTotalStats().getAvailable());
+        Assertions.assertEquals(0, connectionManager.getTotalStats().getLeased());
+        Assertions.assertEquals(0, connectionManager.getTotalStats().getPending());
 
         // ?ping calls
         for (Host host : hosts) {
@@ -110,9 +106,9 @@ public class EcsHostListProviderTest {
         }
 
         // verify client still has no open connections
-        Assert.assertEquals(0, connectionManager.getTotalStats().getAvailable());
-        Assert.assertEquals(0, connectionManager.getTotalStats().getLeased());
-        Assert.assertEquals(0, connectionManager.getTotalStats().getPending());
+        Assertions.assertEquals(0, connectionManager.getTotalStats().getAvailable());
+        Assertions.assertEquals(0, connectionManager.getTotalStats().getLeased());
+        Assertions.assertEquals(0, connectionManager.getTotalStats().getPending());
     }
 
     @Test
@@ -124,18 +120,18 @@ public class EcsHostListProviderTest {
         // test non-VDC host
         Host host = new Host(serverURI.getHost());
         hostListProvider.runHealthCheck(host);
-        Assert.assertTrue(host.isHealthy());
+        Assertions.assertTrue(host.isHealthy());
 
         // test VDC host
         Vdc vdc = new Vdc(serverURI.getHost());
         VdcHost vdcHost = vdc.getHosts().get(0);
         hostListProvider.runHealthCheck(vdcHost);
-        Assert.assertTrue(vdcHost.isHealthy());
-        Assert.assertFalse(vdcHost.isMaintenanceMode());
+        Assertions.assertTrue(vdcHost.isHealthy());
+        Assertions.assertFalse(vdcHost.isMaintenanceMode());
 
         try {
             hostListProvider.runHealthCheck(new Host("localhost"));
-            Assert.fail("health check against bad host should fail");
+            Assertions.fail("health check against bad host should fail");
         } catch (Exception e) {
             // expected
         }
@@ -147,25 +143,25 @@ public class EcsHostListProviderTest {
         VdcHost host = vdc.getHosts().get(0);
 
         // assert the host is healthy first
-        Assert.assertTrue(host.isHealthy());
+        Assertions.assertTrue(host.isHealthy());
 
         // maintenance mode should make the host appear offline
         host.setMaintenanceMode(true);
-        Assert.assertFalse(host.isHealthy());
+        Assertions.assertFalse(host.isHealthy());
 
         host.setMaintenanceMode(false);
-        Assert.assertTrue(host.isHealthy());
+        Assertions.assertTrue(host.isHealthy());
     }
 
     @Test
     public void testPing() {
         String portStr = serverURI.getPort() > 0 ? ":" + serverURI.getPort() : "";
 
-        PingResponse response = client.resource(
+        PingResponse response = client.target(
                 String.format("%s://%s%s/?ping", serverURI.getScheme(), serverURI.getHost(), portStr))
-                .header("x-emc-namespace", "foo").get(PingResponse.class);
-        Assert.assertNotNull(response);
-        Assert.assertEquals(PingItem.Status.OFF, response.getPingItemMap().get(PingItem.MAINTENANCE_MODE).getStatus());
+                .request().header("x-emc-namespace", "foo").get(PingResponse.class);
+        Assertions.assertNotNull(response);
+        Assertions.assertEquals(PingItem.Status.OFF, response.getPingItemMap().get(PingItem.MAINTENANCE_MODE).getStatus());
     }
 
     @Test
@@ -178,10 +174,10 @@ public class EcsHostListProviderTest {
 
         List<Host> hostList = hostListProvider.getHostList();
 
-        Assert.assertTrue("server list should have at least 3 entries", hostList.size() >= 3);
-        Assert.assertTrue("VDC1 server list is empty", vdc1.getHosts().size() > 0);
-        Assert.assertTrue("VDC2 server list is empty", vdc2.getHosts().size() > 0);
-        Assert.assertTrue("VDC3 server list is empty", vdc3.getHosts().size() > 0);
+        Assertions.assertTrue(hostList.size() >= 3, "server list should have at least 3 entries");
+        Assertions.assertTrue(vdc1.getHosts().size() > 0, "VDC1 server list is empty");
+        Assertions.assertTrue(vdc2.getHosts().size() > 0, "VDC2 server list is empty");
+        Assertions.assertTrue(vdc3.getHosts().size() > 0, "VDC3 server list is empty");
     }
 
     @Test
@@ -204,24 +200,24 @@ public class EcsHostListProviderTest {
         Unmarshaller unmarshaller = context.createUnmarshaller();
         PingResponse xObject = (PingResponse) unmarshaller.unmarshal(new StringReader(xml));
 
-        Assert.assertEquals(object.getPingItemMap().keySet(), xObject.getPingItemMap().keySet());
+        Assertions.assertEquals(object.getPingItemMap().keySet(), xObject.getPingItemMap().keySet());
         PingItem pingItem = object.getPingItems().get(0), xPingItem = xObject.getPingItems().get(0);
-        Assert.assertEquals(pingItem.getName(), xPingItem.getName());
-        Assert.assertEquals(pingItem.getStatus(), xPingItem.getStatus());
-        Assert.assertEquals(pingItem.getText(), xPingItem.getText());
-        Assert.assertEquals(pingItem.getValue(), xPingItem.getValue());
+        Assertions.assertEquals(pingItem.getName(), xPingItem.getName());
+        Assertions.assertEquals(pingItem.getStatus(), xPingItem.getStatus());
+        Assertions.assertEquals(pingItem.getText(), xPingItem.getText());
+        Assertions.assertEquals(pingItem.getValue(), xPingItem.getValue());
         pingItem = object.getPingItems().get(1);
         xPingItem = xObject.getPingItems().get(1);
-        Assert.assertEquals(pingItem.getName(), xPingItem.getName());
-        Assert.assertEquals(pingItem.getStatus(), xPingItem.getStatus());
-        Assert.assertEquals(pingItem.getText(), xPingItem.getText());
-        Assert.assertEquals(pingItem.getValue(), xPingItem.getValue());
+        Assertions.assertEquals(pingItem.getName(), xPingItem.getName());
+        Assertions.assertEquals(pingItem.getStatus(), xPingItem.getStatus());
+        Assertions.assertEquals(pingItem.getText(), xPingItem.getText());
+        Assertions.assertEquals(pingItem.getValue(), xPingItem.getValue());
 
         // marshall and compare XML
         Marshaller marshaller = context.createMarshaller();
         StringWriter writer = new StringWriter();
         marshaller.marshal(object, writer);
 
-        Assert.assertEquals(xml, writer.toString());
+        Assertions.assertEquals(xml, writer.toString());
     }
 }

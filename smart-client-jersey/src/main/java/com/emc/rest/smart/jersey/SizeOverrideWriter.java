@@ -15,15 +15,14 @@
  */
 package com.emc.rest.smart.jersey;
 
-import com.sun.jersey.core.impl.provider.entity.ByteArrayProvider;
-import com.sun.jersey.core.impl.provider.entity.FileProvider;
-import com.sun.jersey.core.impl.provider.entity.InputStreamProvider;
+import org.glassfish.jersey.message.internal.ReaderWriter;
 
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.ext.MessageBodyWriter;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.annotation.Annotation;
@@ -62,33 +61,78 @@ public class SizeOverrideWriter<T> implements MessageBodyWriter<T> {
 
     @Override
     public void writeTo(T t, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream) throws IOException, WebApplicationException {
+        Long size = entitySize.get();
+        if (size != null) {
+            httpHeaders.putSingle("Content-Length", size);
+        }
         delegate.writeTo(t, type, genericType, annotations, mediaType, httpHeaders, entityStream);
     }
 
     @Produces({"application/octet-stream", "*/*"})
     public static class ByteArray extends SizeOverrideWriter<byte[]> {
-        private static final ByteArrayProvider delegate = new ByteArrayProvider();
-
         public ByteArray() {
-            super(delegate);
+            super(new MessageBodyWriter<byte[]>() {
+                @Override
+                public boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
+                    return type == byte[].class;
+                }
+
+                @Override
+                public long getSize(byte[] bytes, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
+                    return bytes.length;
+                }
+
+                @Override
+                public void writeTo(byte[] bytes, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream) throws IOException {
+                    entityStream.write(bytes);
+                }
+            });
         }
     }
 
     @Produces({"application/octet-stream", "*/*"})
     public static class File extends SizeOverrideWriter<java.io.File> {
-        private static final FileProvider delegate = new FileProvider();
-
         public File() {
-            super(delegate);
+            super(new MessageBodyWriter<java.io.File>() {
+                @Override
+                public boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
+                    return java.io.File.class.isAssignableFrom(type);
+                }
+
+                @Override
+                public long getSize(java.io.File file, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
+                    return file.length();
+                }
+
+                @Override
+                public void writeTo(java.io.File file, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream) throws IOException {
+                    try (java.io.InputStream in = new FileInputStream(file)) {
+                        ReaderWriter.writeTo(in, entityStream);
+                    }
+                }
+            });
         }
     }
 
     @Produces({"application/octet-stream", "*/*"})
     public static class InputStream extends SizeOverrideWriter<java.io.InputStream> {
-        private static final InputStreamProvider delegate = new InputStreamProvider();
-
         public InputStream() {
-            super(delegate);
+            super(new MessageBodyWriter<java.io.InputStream>() {
+                @Override
+                public boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
+                    return java.io.InputStream.class.isAssignableFrom(type);
+                }
+
+                @Override
+                public long getSize(java.io.InputStream is, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
+                    return -1;
+                }
+
+                @Override
+                public void writeTo(java.io.InputStream is, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream) throws IOException {
+                    ReaderWriter.writeTo(is, entityStream);
+                }
+            });
         }
     }
 

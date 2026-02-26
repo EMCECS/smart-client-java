@@ -15,20 +15,16 @@
  */
 package com.emc.rest.smart.jersey;
 
-import com.sun.jersey.core.impl.provider.entity.XMLRootElementProvider;
-import com.sun.jersey.spi.inject.Injectable;
-
 import javax.ws.rs.Consumes;
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.ext.MessageBodyReader;
-import javax.ws.rs.ext.Providers;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
-import javax.xml.parsers.SAXParserFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
@@ -37,11 +33,6 @@ import java.lang.reflect.Type;
 @Produces("application/octet-stream")
 @Consumes("application/octet-stream")
 public class OctetStreamXmlProvider implements MessageBodyReader<Object> {
-    private final MessageBodyReader<Object> delegate;
-
-    public OctetStreamXmlProvider(@Context Injectable<SAXParserFactory> spf, @Context Providers ps) {
-        this.delegate = new XMLRootElementProvider.General(spf, ps);
-    }
 
     @Override
     public boolean isReadable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
@@ -51,6 +42,11 @@ public class OctetStreamXmlProvider implements MessageBodyReader<Object> {
 
     @Override
     public Object readFrom(Class<Object> type, Type genericType, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, String> httpHeaders, InputStream entityStream) throws IOException, WebApplicationException {
-        return delegate.readFrom(type, genericType, annotations, mediaType, httpHeaders, entityStream);
+        try {
+            JAXBContext context = JAXBContext.newInstance(type);
+            return context.createUnmarshaller().unmarshal(entityStream);
+        } catch (JAXBException e) {
+            throw new IOException("Error unmarshalling XML from octet-stream", e);
+        }
     }
 }
