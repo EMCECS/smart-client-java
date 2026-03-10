@@ -17,21 +17,21 @@ package com.emc.rest.smart.jersey;
 
 import com.emc.rest.smart.PollingDaemon;
 import com.emc.rest.smart.SmartConfig;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientHandler;
-import com.sun.jersey.api.client.config.ClientConfig;
-import com.sun.jersey.api.client.config.DefaultClientConfig;
-import com.sun.jersey.client.apache4.ApacheHttpClient4;
-import com.sun.jersey.client.apache4.ApacheHttpClient4Handler;
-import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
-import com.sun.jersey.core.impl.provider.entity.ByteArrayProvider;
-import com.sun.jersey.core.impl.provider.entity.FileProvider;
-import com.sun.jersey.core.impl.provider.entity.InputStreamProvider;
 import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.glassfish.jersey.apache.connector.ApacheClientProperties;
+import org.glassfish.jersey.apache.connector.ApacheConnectorProvider;
+import org.glassfish.jersey.client.ClientConfig;
+import org.glassfish.jersey.client.ClientProperties;
+import org.glassfish.jersey.client.spi.ConnectorProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import java.io.File;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -48,25 +48,20 @@ public final class SmartClientFactory {
 
     public static final String IDLE_CONNECTION_MONITOR_PROPERTY_KEY = "com.emc.rest.smart.idleConnectionsExecSvc";
     public static final String CONNECTION_MANAGER_PROPERTY_KEY = "com.emc.rest.smart.apacheConnectionManager";
+    public static final String POLLING_DAEMON_PROPERTY_KEY = PollingDaemon.PROPERTY_KEY;
 
     public static Client createSmartClient(SmartConfig smartConfig) {
-        return createSmartClient(smartConfig, createApacheClientHandler(smartConfig));
-    }
-
-    public static Client createSmartClient(SmartConfig smartConfig,
-                                           ClientHandler clientHandler) {
-        Client client = createStandardClient(smartConfig, clientHandler);
-
-        // inject SmartFilter (this is the Jersey integration point of the load balancer)
-        client.addFilter(new SmartFilter(smartConfig));
+        ConnectorProvider apacheProvider = createApacheConnectorProvider(smartConfig);
+        ConnectorProvider smartProvider = new SmartFilter.SmartConnectorProvider(smartConfig, apacheProvider);
+        Client client = createStandardClient(smartConfig, smartProvider);
 
         // set up polling for updated host list (if polling is disabled in smartConfig or there's no host list provider,
         // nothing will happen)
         PollingDaemon pollingDaemon = new PollingDaemon(smartConfig);
         pollingDaemon.start();
 
-        // attach the daemon thread to the client so users can stop it when finished with the client
-        client.getProperties().put(PollingDaemon.PROPERTY_KEY, pollingDaemon);
+        // attach the daemon thread to the smartConfig so users can stop it when finished with the client
+        smartConfig.getProperties().put(PollingDaemon.PROPERTY_KEY, pollingDaemon);
 
         return client;
     }
@@ -76,7 +71,7 @@ public final class SmartClientFactory {
      * or node polling.
      */
     public static Client createStandardClient(SmartConfig smartConfig) {
-        return createStandardClient(smartConfig, createApacheClientHandler(smartConfig));
+        return createStandardClient(smartConfig, createApacheConnectorProvider(smartConfig));
     }
 
     /**
@@ -84,29 +79,26 @@ public final class SmartClientFactory {
      * or node polling.
      */
     public static Client createStandardClient(SmartConfig smartConfig,
-                                              ClientHandler clientHandler) {
+                                              ConnectorProvider connectorProvider) {
         // init Jersey config
-        ClientConfig clientConfig = new DefaultClientConfig();
+        ClientConfig clientConfig = new ClientConfig();
+
+        // set connector provider
+        clientConfig.connectorProvider(connectorProvider);
 
         // pass in jersey parameters from calling code (allows customization of client)
         for (String propName : smartConfig.getProperties().keySet()) {
-            clientConfig.getProperties().put(propName, smartConfig.getProperty(propName));
+            clientConfig.property(propName, smartConfig.getProperty(propName));
         }
 
-        // replace sized writers with override writers to allow dynamic content-length (i.e. for transformations)
-        clientConfig.getClasses().remove(ByteArrayProvider.class);
-        clientConfig.getClasses().remove(FileProvider.class);
-        clientConfig.getClasses().remove(InputStreamProvider.class);
-        clientConfig.getClasses().add(SizeOverrideWriter.ByteArray.class);
-        clientConfig.getClasses().add(SizeOverrideWriter.File.class);
-        clientConfig.getClasses().add(SizeOverrideWriter.SizedInputStream.class);
-        clientConfig.getClasses().add(SizeOverrideWriter.InputStream.class);
-        clientConfig.getClasses().add(ByteArrayProvider.class);
-        clientConfig.getClasses().add(FileProvider.class);
-        clientConfig.getClasses().add(InputStreamProvider.class);
+        // register size override interceptor for dynamic content-length
+        clientConfig.register(SizeOverrideWriter.class);
+
+        // register SizedInputStream writer
+        clientConfig.register(SizedInputStreamWriter.class);
 
         // add support for XML with no content-type
-        clientConfig.getClasses().add(OctetStreamXmlProvider.class);
+        clientConfig.register(OctetStreamXmlProvider.class);
 
         // add JSON support (using Jackson's ObjectMapper instead of JAXB marshalling)
         JacksonJaxbJsonProvider jsonProvider = new JacksonJaxbJsonProvider();
@@ -114,10 +106,10 @@ public final class SmartClientFactory {
         jsonProvider.addUntouchable(InputStream.class);
         jsonProvider.addUntouchable(OutputStream.class);
         jsonProvider.addUntouchable(File.class);
-        clientConfig.getSingletons().add(jsonProvider);
+        clientConfig.register(jsonProvider);
 
         // build Jersey client
-        return new Client(clientHandler, clientConfig);
+        return ClientBuilder.newClient(clientConfig);
     }
 
     /**
@@ -131,7 +123,17 @@ public final class SmartClientFactory {
      * undefined behavior will occur.
      */
     public static void destroy(Client client) {
-        PollingDaemon pollingDaemon = (PollingDaemon) client.getProperties().get(PollingDaemon.PROPERTY_KEY);
+        // Note: in Jersey 2, polling daemon and connection resources are tracked in SmartConfig properties
+        // For backward compatibility, also check client configuration
+        log.debug("closing Jersey client");
+        client.close();
+    }
+
+    /**
+     * Destroy the smart client and associated resources tracked in SmartConfig.
+     */
+    public static void destroy(Client client, SmartConfig smartConfig) {
+        PollingDaemon pollingDaemon = (PollingDaemon) smartConfig.getProperties().get(PollingDaemon.PROPERTY_KEY);
         if (pollingDaemon != null) {
             log.debug("terminating polling daemon");
             pollingDaemon.terminate();
@@ -141,35 +143,31 @@ public final class SmartClientFactory {
             }
         }
 
-        ScheduledExecutorService sched = (ScheduledExecutorService)client.getProperties().get(IDLE_CONNECTION_MONITOR_PROPERTY_KEY);
+        ScheduledExecutorService sched = (ScheduledExecutorService) smartConfig.getProperties().get(IDLE_CONNECTION_MONITOR_PROPERTY_KEY);
         if (sched != null) {
             log.debug("shutting down scheduled idle connections monitoring task");
             sched.shutdownNow();
         }
 
-        org.apache.http.impl.conn.PoolingClientConnectionManager connectionManager = (org.apache.http.impl.conn.PoolingClientConnectionManager)client.getProperties().get(CONNECTION_MANAGER_PROPERTY_KEY);
+        PoolingHttpClientConnectionManager connectionManager = (PoolingHttpClientConnectionManager) smartConfig.getProperties().get(CONNECTION_MANAGER_PROPERTY_KEY);
         if (connectionManager != null) {
             log.debug("shutting down connection pool");
-            connectionManager.shutdown();
+            connectionManager.close();
         }
 
-        log.debug("destroying Jersey client");
-        client.destroy();
+        log.debug("closing Jersey client");
+        client.close();
     }
 
-    static ApacheHttpClient4Handler createApacheClientHandler(SmartConfig smartConfig) {
-        ClientConfig clientConfig = new DefaultClientConfig();
-
+    static ConnectorProvider createApacheConnectorProvider(SmartConfig smartConfig) {
         // set up multi-threaded connection pool
-        // TODO: find a non-deprecated connection manager that works (swapping out with
-        //       PoolingHttpClientConnectionManager will break threading)
-        org.apache.http.impl.conn.PoolingClientConnectionManager connectionManager = new org.apache.http.impl.conn.PoolingClientConnectionManager();
-        // 999 maximum active connections (max allowed)
+        PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
         connectionManager.setDefaultMaxPerRoute(smartConfig.getIntProperty(MAX_CONNECTIONS_PER_HOST, MAX_CONNECTIONS_PER_HOST_DEFAULT));
         connectionManager.setMaxTotal(smartConfig.getIntProperty(MAX_CONNECTIONS, MAX_CONNECTIONS_DEFAULT));
-        clientConfig.getProperties().put(ApacheHttpClient4Config.PROPERTY_CONNECTION_MANAGER, connectionManager);
+
         // stash connection manager in smartConfig for cleanup later in destroy()
         smartConfig.getProperties().put(CONNECTION_MANAGER_PROPERTY_KEY, connectionManager);
+        smartConfig.setProperty(ApacheClientProperties.CONNECTION_MANAGER, connectionManager);
 
         if (smartConfig.getMaxConnectionIdleTime() > 0) {
             ScheduledExecutorService sched = Executors.newSingleThreadScheduledExecutor();
@@ -181,26 +179,19 @@ public final class SmartClientFactory {
 
         // set proxy config
         if (smartConfig.getProxyUri() != null)
-            clientConfig.getProperties().put(ApacheHttpClient4Config.PROPERTY_PROXY_URI, smartConfig.getProxyUri());
+            smartConfig.setProperty(ClientProperties.PROXY_URI, smartConfig.getProxyUri().toString());
         if (smartConfig.getProxyUser() != null)
-            clientConfig.getProperties().put(ApacheHttpClient4Config.PROPERTY_PROXY_USERNAME, smartConfig.getProxyUser());
+            smartConfig.setProperty(ClientProperties.PROXY_USERNAME, smartConfig.getProxyUser());
         if (smartConfig.getProxyPass() != null)
-            clientConfig.getProperties().put(ApacheHttpClient4Config.PROPERTY_PROXY_PASSWORD, smartConfig.getProxyPass());
-
-        // pass in jersey parameters from calling code (allows customization of client)
-        for (String propName : smartConfig.getProperties().keySet()) {
-            clientConfig.getProperties().put(propName, smartConfig.getProperty(propName));
-        }
-
-        ApacheHttpClient4Handler handler = ApacheHttpClient4.create(clientConfig).getClientHandler();
+            smartConfig.setProperty(ClientProperties.PROXY_PASSWORD, smartConfig.getProxyPass());
 
         // disable the retry handler if necessary
         if (smartConfig.getProperty(DISABLE_APACHE_RETRY) != null) {
-            org.apache.http.impl.client.AbstractHttpClient httpClient = (org.apache.http.impl.client.AbstractHttpClient) handler.getHttpClient();
-            httpClient.setHttpRequestRetryHandler(new org.apache.http.impl.client.DefaultHttpRequestRetryHandler(0, false));
+            smartConfig.setProperty(ApacheClientProperties.RETRY_HANDLER,
+                    new org.apache.http.impl.client.DefaultHttpRequestRetryHandler(0, false));
         }
 
-        return handler;
+        return new ApacheConnectorProvider();
     }
 
     private SmartClientFactory() {

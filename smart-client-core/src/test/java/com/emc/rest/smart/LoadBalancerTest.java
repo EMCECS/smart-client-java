@@ -16,11 +16,10 @@
 package com.emc.rest.smart;
 
 import com.emc.rest.util.RequestSimulator;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogMF;
-import org.apache.log4j.Logger;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,7 +30,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class LoadBalancerTest {
-    private static final Logger l4j = Logger.getLogger(LoadBalancerTest.class);
+    private static final Logger l4j = LoggerFactory.getLogger(LoadBalancerTest.class);
 
     @Test
     public void testDistribution() {
@@ -46,21 +45,18 @@ public class LoadBalancerTest {
         RequestSimulator simulator = new RequestSimulator(loadBalancer, callCount);
         simulator.run();
 
-        Assert.assertEquals("errors during call simulation", 0, simulator.getErrors().size());
+        Assertions.assertEquals(0, simulator.getErrors().size(), "errors during call simulation");
 
         l4j.info(Arrays.toString(loadBalancer.getHostStats()));
 
         for (HostStats stats : loadBalancer.getHostStats()) {
-            Assert.assertTrue("unbalanced call count", Math.abs(callCount / hostList.length - stats.getTotalConnections()) <= 3);
+            Assertions.assertTrue(Math.abs(callCount / hostList.length - stats.getTotalConnections()) <= 3, "unbalanced call count");
         }
     }
 
     @Test
     public void testEfficiency() throws Exception {
-        // turn down logging (will skew result drastically)
-        Logger hostLogger = Logger.getLogger(Host.class);
-        Level logLevel = hostLogger.getLevel();
-        hostLogger.setLevel(Level.WARN);
+        // note: with slf4j, log level is configured externally; test proceeds assuming logging is minimal
 
 
         SmartConfig smartConfig = new SmartConfig("foo", "bar", "baz", "biz");
@@ -83,10 +79,9 @@ public class LoadBalancerTest {
 
         l4j.info(Arrays.toString(loadBalancer.getHostStats()));
 
-        LogMF.warn(l4j, "per call overhead: {0}µs", perCallOverhead / 1000);
-        hostLogger.setLevel(logLevel);
+        l4j.warn("per call overhead: {}µs", perCallOverhead / 1000);
 
-        Assert.assertTrue("call overhead too high", perCallOverhead < 100000); // must be less than .1ms
+        Assertions.assertTrue(perCallOverhead < 100000, "call overhead too high"); // must be less than .1ms
     }
 
     static class LBOverheadTask implements Callable<Long> {

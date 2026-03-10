@@ -16,15 +16,16 @@
 package com.emc.rest.smart;
 
 import com.emc.rest.util.RequestSimulator;
-import org.apache.log4j.Logger;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.List;
 
 public class TestHealthCheck {
-    private static final Logger l4j = Logger.getLogger(TestHealthCheck.class);
+    private static final Logger l4j = LoggerFactory.getLogger(TestHealthCheck.class);
 
     @Test
     public void testUnhealthyHostIgnored() {
@@ -43,15 +44,15 @@ public class TestHealthCheck {
         RequestSimulator simulator = new RequestSimulator(loadBalancer, callCount);
         simulator.run();
 
-        Assert.assertEquals("errors during call simulation", 0, simulator.getErrors().size());
+        Assertions.assertEquals(0, simulator.getErrors().size(), "errors during call simulation");
 
         l4j.info(Arrays.toString(loadBalancer.getHostStats()));
 
         for (HostStats stats : loadBalancer.getHostStats()) {
             if (stats.equals(foo)) {
-                Assert.assertEquals("unhealthy host should be ignored", 0, stats.getTotalConnections());
+                Assertions.assertEquals(0, stats.getTotalConnections(), "unhealthy host should be ignored");
             } else {
-                Assert.assertTrue("unbalanced call count", Math.abs(callCount / (hostList.length - 1) - stats.getTotalConnections()) <= 3);
+                Assertions.assertTrue(Math.abs(callCount / (hostList.length - 1) - stats.getTotalConnections()) <= 3, "unbalanced call count");
             }
         }
     }
@@ -77,22 +78,22 @@ public class TestHealthCheck {
         Thread.sleep(200); // give poller a chance to run
         poller.terminate();
 
-        Assert.assertFalse(foo.isHealthy());
-        Assert.assertEquals(4, loadBalancer.getAllHosts().size());
+        Assertions.assertFalse(foo.isHealthy());
+        Assertions.assertEquals(4, loadBalancer.getAllHosts().size());
 
         // simulate calls
         RequestSimulator simulator = new RequestSimulator(loadBalancer, callCount);
         simulator.run();
 
-        Assert.assertEquals("errors during call simulation", 0, simulator.getErrors().size());
+        Assertions.assertEquals(0, simulator.getErrors().size(), "errors during call simulation");
 
         l4j.info(Arrays.toString(loadBalancer.getHostStats()));
 
         for (HostStats stats : loadBalancer.getHostStats()) {
             if (stats.equals(foo)) {
-                Assert.assertEquals("unhealthy host should be ignored", 0, stats.getTotalConnections());
+                Assertions.assertEquals(0, stats.getTotalConnections(), "unhealthy host should be ignored");
             } else {
-                Assert.assertTrue("unbalanced call count", Math.abs(callCount / (hostList.length - 1) - stats.getTotalConnections()) <= 3);
+                Assertions.assertTrue(Math.abs(callCount / (hostList.length - 1) - stats.getTotalConnections()) <= 3, "unbalanced call count");
             }
         }
 
@@ -103,20 +104,20 @@ public class TestHealthCheck {
         Thread.sleep(200); // give poller a chance to run
         poller.terminate();
 
-        Assert.assertTrue(foo.isHealthy());
-        Assert.assertEquals(4, loadBalancer.getAllHosts().size());
+        Assertions.assertTrue(foo.isHealthy());
+        Assertions.assertEquals(4, loadBalancer.getAllHosts().size());
 
         // reset stats and simulate calls
         loadBalancer.resetStats();
         simulator = new RequestSimulator(loadBalancer, callCount);
         simulator.run();
 
-        Assert.assertEquals("errors during call simulation", 0, simulator.getErrors().size());
+        Assertions.assertEquals(0, simulator.getErrors().size(), "errors during call simulation");
 
         l4j.info(Arrays.toString(loadBalancer.getHostStats()));
 
         for (HostStats stats : loadBalancer.getHostStats()) {
-            Assert.assertTrue("unbalanced call count", Math.abs(callCount / hostList.length - stats.getTotalConnections()) <= 3);
+            Assertions.assertTrue(Math.abs(callCount / hostList.length - stats.getTotalConnections()) <= 3, "unbalanced call count");
         }
     }
 
