@@ -150,8 +150,8 @@ public class SmartConfig {
     public Integer getIntProperty(String propName, int defaultValue) {
         Object pValue = properties.get(propName);
         if (pValue == null) return defaultValue;
+        if (pValue instanceof Number) return ((Number) pValue).intValue();
         try {
-            if (pValue instanceof Number) return ((Number) pValue).intValue();
             return Integer.parseInt(pValue.toString());
         } catch (Throwable t) {
             log.debug("cannot parse the config value for " + propName, t);
