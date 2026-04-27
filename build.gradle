@@ -137,6 +137,23 @@ subprojects {
     }
 
     signing {
+        // Modern GPG keys (Ed25519/Curve25519/ECDH = algorithm 18) cannot be parsed
+        // by the signing plugin's bundled BouncyCastle when reading secring.gpg.
+        // useGpgCmd() shells out to the local `gpg` binary instead, which handles
+        // every algorithm natively. Requires gpg on PATH (you already have it,
+        // since you exported secring.gpg with it).
+        //
+        // Properties consumed by useGpgCmd():
+        //   signing.gnupg.keyName        ← mapped from -PsigningKeyId below
+        //   signing.gnupg.passphrase     ← mapped from -PsigningPass below
+        //   signing.gnupg.executable     defaults to 'gpg' (override if needed)
+        //   signing.gnupg.homeDir        defaults to ~/.gnupg
+        useGpgCmd()
+
+        // hasTask(String) resolves relative paths against the ROOT project, so
+        // hasTask('publish') was looking for :publish (which does not exist) and
+        // always returned false — meaning signing was never required and no .asc
+        // files were uploaded. Match by task name across all projects instead.
         required {
             gradle.taskGraph.allTasks.any { t ->
                 t.name == 'publish' || t.name == 'publishToPortal' ||
@@ -185,9 +202,15 @@ subprojects {
                 rootProject.ext.sonatypeUser = new String(System.console().readLine('\nSonatype username: '))
             if (!rootProject.hasProperty('sonatypePass'))
                 rootProject.ext.sonatypePass = new String(System.console().readPassword('\nSonatype password: '))
+            // Legacy properties (used by signing plugin in BouncyCastle mode — kept
+            // for backwards-compat in case anything else reads them, but useGpgCmd()
+            // does not consume them).
             ext.'signing.keyId' = rootProject.ext.signingKeyId
             ext.'signing.secretKeyRingFile' = rootProject.ext.signingSecretKeyRingFile
             ext.'signing.password' = rootProject.ext.signingPass
+            // useGpgCmd() reads these:
+            ext.'signing.gnupg.keyName'    = rootProject.ext.signingKeyId
+            ext.'signing.gnupg.passphrase' = rootProject.ext.signingPass
         }
     }
 }
