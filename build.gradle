@@ -94,7 +94,7 @@ subprojects {
 
                 pom {
                     name = project.name
-                    description = project.description
+                    description = providers.provider { project.description ?: project.name }
                     url = githubProjectUrl
 
                     scm {
@@ -137,7 +137,12 @@ subprojects {
     }
 
     signing {
-        required { gradle.taskGraph.hasTask('publish') }
+        required {
+            gradle.taskGraph.allTasks.any { t ->
+                t.name == 'publish' || t.name == 'publishToPortal' ||
+                t.name == 'publishMavenJavaPublicationToCentralPortalOssrhStagingRepository'
+            }
+        }
         sign publishing.publications.mavenJava
     }
 
@@ -169,7 +174,7 @@ subprojects {
     //       if that's not possible, it's best to read passwords into env. variables and set these properties on the gradle
     //       command line ( -PsigningPass="${SIGNING_PASS}" -PsonatypePass="${SONATYPE_PASS}" )
     gradle.taskGraph.whenReady { taskGraph ->
-        if (taskGraph.hasTask('publish')) {
+        if (taskGraph.allTasks.any { t -> t.name == 'publish' || t.name == 'publishToPortal' || t.name == 'publishMavenJavaPublicationToCentralPortalOssrhStagingRepository' }) {
             if (!rootProject.hasProperty('signingSecretKeyRingFile'))
                 rootProject.ext.signingSecretKeyRingFile = new String(System.console().readLine('\nSecret key ring file: '))
             if (!rootProject.hasProperty('signingKeyId'))
