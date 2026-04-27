@@ -123,8 +123,11 @@ subprojects {
 
         repositories {
             maven {
-                name = 'sonatype'
-                url = 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+                // OSSRH is EOL (June 30 2025). Use the Central Portal OSSRH Staging API
+                // compatibility service. Credentials must now be a Portal user token
+                // (generate at https://central.sonatype.com/account) — not the old OSSRH password.
+                name = 'centralPortalOssrhStaging'
+                url = 'https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/'
                 credentials {
                     username = findProperty('sonatypeUser') ?: ''
                     password = findProperty('sonatypePass') ?: ''
@@ -215,7 +218,71 @@ gitPublish {
 }
 tasks.gitPublishPush.dependsOn aggregateDocs
 
-tasks.release.dependsOn subprojects.test, gitPublishPush, subprojects.distZip
+// After uploading via maven-publish (a "Maven-API-like" plugin that only does PUTs),
+// we must POST to the manual upload endpoint so the deployment becomes visible in the
+// Central Publisher Portal (https://central.sonatype.com/publishing/deployments).
+//
+// Multi-module note: all three subprojects upload to the same staging repository
+// (the OSSRH Staging API isolates by IP, not by artifact). One POST therefore
+// transfers ALL three modules together as a single Portal deployment. The Portal
+// validates them as a unit — if any module fails (missing pom field, bad signature,
+// etc.) the whole deployment is rejected, which is what you want for a multi-module
+// release.
+//
+// Auth quirk: /manual/* endpoints require Bearer <base64(user:pass)>, NOT Basic.
+// Same credentials as the PUT upload, different scheme keyword.
+task publishToPortal {
+    group = 'publishing'
+    description = 'Signals the OSSRH Staging API to transfer all subprojects\' staged artifacts to the Central Publisher Portal for review/release'
+    dependsOn subprojects.collect { "${it.path}:publish" }
+    doLast {
+        def namespace   = 'com.emc.ecs'                     // matches subprojects.group
+        def portalUser  = rootProject.findProperty('sonatypeUser') ?: ''
+        def portalPass  = rootProject.findProperty('sonatypePass') ?: ''
+        if (!portalUser || !portalPass) {
+            throw new GradleException('sonatypeUser/sonatypePass not set — generate a Portal token at https://central.sonatype.com/account')
+        }
+        def endpoint = "https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/${namespace}?publishing_type=user_managed"
+        def bearer   = java.util.Base64.encoder.encodeToString(
+                            "${portalUser}:${portalPass}".getBytes('UTF-8'))
+
+        logger.lifecycle("  Signalling Central Portal to transfer staged deployment for namespace: ${namespace}")
+        logger.lifecycle("    Subprojects included: ${subprojects*.name.join(', ')}")
+        def conn = (java.net.HttpURLConnection) new URL(endpoint).openConnection()
+        try {
+            conn.requestMethod  = 'POST'
+            conn.connectTimeout =  30_000
+            conn.readTimeout    = 120_000
+            conn.setRequestProperty('Authorization', "Bearer ${bearer}")
+            conn.setRequestProperty('Content-Length', '0')
+            conn.setRequestProperty('Accept', 'application/json')
+            conn.connect()
+
+            def code = conn.responseCode
+            if (code in [200, 201, 202, 204]) {
+                logger.lifecycle("  Deployment transferred to Central Publisher Portal (HTTP ${code}).")
+                logger.lifecycle('  Review and publish at: https://central.sonatype.com/publishing/deployments')
+            } else {
+                def body = '(no body)'
+                try { if (conn.errorStream) body = new String(conn.errorStream.bytes, 'UTF-8') } catch (ignored) { }
+                def hint = (code == 401)
+                    ? '  → 401: Portal user token is invalid/expired. Regenerate at https://central.sonatype.com/account\n'
+                    : (code == 404)
+                        ? '  → 404: No staging repo found for IP. Did the upload actually run? Check that signing succeeded.\n'
+                        : ''
+                throw new GradleException(
+                    "Failed to transfer deployment to Central Publisher Portal: HTTP ${code}\n${hint}${body}")
+            }
+        } finally {
+            conn.disconnect()
+        }
+    }
+}
+
+// NOTE: previously this only depended on test, gitPublishPush, distZip — it never
+// triggered the publish task, so historical `release` runs created git tags but
+// never uploaded artifacts to Maven Central. publishToPortal fixes that.
+tasks.release.dependsOn subprojects.test, publishToPortal, gitPublishPush, subprojects.distZip
 
 clean {
     delete aggregatedDocsDir
