@@ -192,8 +192,6 @@ subprojects {
     //       command line ( -PsigningPass="${SIGNING_PASS}" -PsonatypePass="${SONATYPE_PASS}" )
     gradle.taskGraph.whenReady { taskGraph ->
         if (taskGraph.allTasks.any { t -> t.name == 'publish' || t.name == 'publishToPortal' || t.name == 'publishMavenJavaPublicationToCentralPortalOssrhStagingRepository' }) {
-            if (!rootProject.hasProperty('signingSecretKeyRingFile'))
-                rootProject.ext.signingSecretKeyRingFile = new String(System.console().readLine('\nSecret key ring file: '))
             if (!rootProject.hasProperty('signingKeyId'))
                 rootProject.ext.signingKeyId = new String(System.console().readLine('\nSigning key id: '))
             if (!rootProject.hasProperty('signingPass'))
@@ -202,11 +200,8 @@ subprojects {
                 rootProject.ext.sonatypeUser = new String(System.console().readLine('\nSonatype username: '))
             if (!rootProject.hasProperty('sonatypePass'))
                 rootProject.ext.sonatypePass = new String(System.console().readPassword('\nSonatype password: '))
-            // Legacy properties (used by signing plugin in BouncyCastle mode — kept
-            // for backwards-compat in case anything else reads them, but useGpgCmd()
-            // does not consume them).
+            // Legacy properties (unused by useGpgCmd() but kept for reference).
             ext.'signing.keyId' = rootProject.ext.signingKeyId
-            ext.'signing.secretKeyRingFile' = rootProject.ext.signingSecretKeyRingFile
             ext.'signing.password' = rootProject.ext.signingPass
             // useGpgCmd() reads these:
             ext.'signing.gnupg.keyName'    = rootProject.ext.signingKeyId
