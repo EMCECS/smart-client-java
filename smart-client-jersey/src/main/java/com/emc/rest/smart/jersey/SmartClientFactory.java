@@ -61,7 +61,9 @@ public final class SmartClientFactory {
 
         // build client config with smart filter connector wrapping the base connector
         ClientConfig clientConfig = createClientConfig(smartConfig);
-        configureApacheConnector(smartConfig, clientConfig);
+        if (baseConnectorProvider instanceof ApacheConnectorProvider) {
+            configureApacheConnector(smartConfig, clientConfig);
+        }
 
         // inject SmartFilter as a connector wrapper (this is the Jersey integration point of the load balancer)
         clientConfig.connectorProvider((jaxRsClient, runtimeConfig) -> {
@@ -92,7 +94,9 @@ public final class SmartClientFactory {
                                               ConnectorProvider connectorProvider) {
         // init Jersey config
         ClientConfig clientConfig = createClientConfig(smartConfig);
-        configureApacheConnector(smartConfig, clientConfig);
+        if (connectorProvider instanceof ApacheConnectorProvider) {
+            configureApacheConnector(smartConfig, clientConfig);
+        }
         clientConfig.connectorProvider(connectorProvider);
 
         // build Jersey client
