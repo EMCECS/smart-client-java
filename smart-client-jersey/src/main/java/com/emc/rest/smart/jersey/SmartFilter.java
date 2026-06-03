@@ -15,24 +15,33 @@
  */
 package com.emc.rest.smart.jersey;
 
-import com.emc.rest.smart.Host;
-import com.emc.rest.smart.SmartClientException;
-import com.emc.rest.smart.SmartConfig;
-import org.glassfish.jersey.client.ClientRequest;
-import org.glassfish.jersey.client.ClientResponse;
-import org.glassfish.jersey.client.spi.AsyncConnectorCallback;
-import org.glassfish.jersey.client.spi.Connector;
-
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.ConnectException;
+import java.net.NoRouteToHostException;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Future;
 
+import org.glassfish.jersey.client.ClientRequest;
+import org.glassfish.jersey.client.ClientResponse;
+import org.glassfish.jersey.client.spi.AsyncConnectorCallback;
+import org.glassfish.jersey.client.spi.Connector;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.emc.rest.smart.Host;
+import com.emc.rest.smart.SmartClientException;
+import com.emc.rest.smart.SmartConfig;
+
 public class SmartFilter implements Connector {
+    private static final Logger log = LoggerFactory.getLogger(SmartFilter.class);
+
     public static final String BYPASS_LOAD_BALANCER = "com.emc.rest.smart.bypassLoadBalancer";
 
     private final Connector delegate;
@@ -51,35 +60,52 @@ public class SmartFilter implements Connector {
             return delegate.apply(request);
         }
 
-        // get highest ranked host for next request
-        Map<String, Object> requestProperties = getRequestProperties(request);
-        Host host = smartConfig.getLoadBalancer().getTopHost(requestProperties);
+        int maxRetries = smartConfig.getMaxRetryAttempts();
+        RuntimeException lastException = null;
 
-        // replace the host in the request
-        rewriteUri(request, host);
+        for (int attempt = 0; attempt <= maxRetries; attempt++) {
+            // get highest ranked host for next request
+            Map<String, Object> requestProperties = getRequestProperties(request);
+            Host host = smartConfig.getLoadBalancer().getTopHost(requestProperties);
 
-        // track requests stats for LB ranking
-        host.connectionOpened(); // not really, but we can't (cleanly) intercept any lower than this
-        try {
-            // call to delegate
-            ClientResponse response = delegate.apply(request);
+            // replace the host in the request
+            rewriteUri(request, host);
 
-            // capture request stats
-            // except for 501 (not implemented), all 50x responses are considered server errors
-            host.callComplete(response.getStatus() >= 500 && response.getStatus() != 501);
+            // track requests stats for LB ranking
+            host.connectionOpened(); // not really, but we can't (cleanly) intercept any lower than this
+            try {
+                // call to delegate
+                ClientResponse response = delegate.apply(request);
 
-            // wrap the input stream so we can capture the actual connection close
-            response.setEntityStream(new WrappedInputStream(response.getEntityStream(), host));
+                // capture request stats
+                // except for 501 (not implemented), all 50x responses are considered server errors
+                host.callComplete(response.getStatus() >= 500 && response.getStatus() != 501);
 
-            return response;
-        } catch (RuntimeException e) {
-            // capture requests stats (error)
-            boolean isServerError = e instanceof SmartClientException && ((SmartClientException) e).isServerError();
-            host.callComplete(isServerError);
-            host.connectionClosed();
+                // wrap the input stream so we can capture the actual connection close
+                response.setEntityStream(new WrappedInputStream(response.getEntityStream(), host));
 
-            throw e;
+                return response;
+            } catch (RuntimeException e) {
+                // Connection-level failures (timeouts, refused, etc.) and unknown errors
+                // should be counted against the host. Only client-side (4xx) errors from
+                // SmartClientException are not the host's fault.
+                boolean isError = isHostError(e);
+                host.callComplete(isError);
+                host.connectionClosed();
+
+                // retry transparently on connection-level errors
+                if (isConnectError(e) && attempt < maxRetries) {
+                    log.warn("connection error to host {} (attempt {}/{}), retrying with next host: {}",
+                            host.getName(), attempt + 1, maxRetries + 1, e.toString());
+                    lastException = e;
+                    continue;
+                }
+
+                throw e;
+            }
         }
+        // all retry attempts exhausted
+        throw lastException;
     }
 
     @Override
@@ -89,6 +115,12 @@ public class SmartFilter implements Connector {
         if (bypass != null && bypass) {
             return delegate.apply(request, callback);
         }
+
+        return applyAsync(request, callback, 0);
+    }
+
+    private Future<?> applyAsync(ClientRequest request, AsyncConnectorCallback callback, int attempt) {
+        int maxRetries = smartConfig.getMaxRetryAttempts();
 
         // get highest ranked host for next request
         Map<String, Object> requestProperties = getRequestProperties(request);
@@ -110,9 +142,18 @@ public class SmartFilter implements Connector {
 
             @Override
             public void failure(Throwable failure) {
-                boolean isServerError = failure instanceof SmartClientException && ((SmartClientException) failure).isServerError();
-                host.callComplete(isServerError);
+                boolean isError = isHostError(failure);
+                host.callComplete(isError);
                 host.connectionClosed();
+
+                // retry transparently on connection-level errors
+                if (isConnectError(failure) && attempt < maxRetries) {
+                    log.warn("async connection error to host {} (attempt {}/{}), retrying with next host: {}",
+                            host.getName(), attempt + 1, maxRetries + 1, failure.toString());
+                    applyAsync(request, callback, attempt + 1);
+                    return;
+                }
+
                 callback.failure(failure);
             }
         });
@@ -146,6 +187,45 @@ public class SmartFilter implements Connector {
             props.put(name, request.getProperty(name));
         }
         return props;
+    }
+
+    /**
+     * Determines if an exception should be counted as a host error for load-balancing purposes.
+     * All exceptions are considered host errors except SmartClientException with ErrorType.Client
+     * (4xx), which indicates a caller error, not a host problem.
+     */
+    public static boolean isHostError(Throwable t) {
+        if (t instanceof SmartClientException) {
+            return ((SmartClientException) t).getErrorType() != SmartClientException.ErrorType.Client;
+        }
+        return true;
+    }
+
+    /**
+     * Checks whether the given exception (or any cause in its chain) is a connection-level error
+     * that occurred before any request data was sent, making it safe to retry on a different host.
+     */
+    public static boolean isConnectError(Throwable t) {
+        while (t != null) {
+            if (t instanceof ConnectException
+                    || t instanceof NoRouteToHostException
+                    || t instanceof UnknownHostException) {
+                return true;
+            }
+            // Socket timeout during connection phase (not read timeout)
+            if (t instanceof SocketTimeoutException
+                    && t.getMessage() != null
+                    && t.getMessage().toLowerCase(java.util.Locale.ROOT).contains("connect")) {
+                return true;
+            }
+            // Apache HttpClient connect timeout
+            // (org.apache.http.conn.ConnectTimeoutException extends InterruptedIOException)
+            if ("org.apache.http.conn.ConnectTimeoutException".equals(t.getClass().getName())) {
+                return true;
+            }
+            t = t.getCause();
+        }
+        return false;
     }
 
     /**
