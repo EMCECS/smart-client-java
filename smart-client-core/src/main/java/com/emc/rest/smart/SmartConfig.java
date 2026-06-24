@@ -32,6 +32,7 @@ public class SmartConfig {
     private static final Logger log = LoggerFactory.getLogger(SmartConfig.class);
 
     public static final int DEFAULT_POLL_INTERVAL = 120; // seconds
+    public static final int DEFAULT_MAX_RETRY_ATTEMPTS = 2;
 
     private URI proxyUri;
     private String proxyUser;
@@ -42,6 +43,7 @@ public class SmartConfig {
     private int pollInterval = DEFAULT_POLL_INTERVAL;
     private boolean hostUpdateEnabled = true;
     private boolean healthCheckEnabled = true;
+    private int maxRetryAttempts = DEFAULT_MAX_RETRY_ATTEMPTS;
     private int maxConnectionIdleTime = 0;
 
     private final Map<String, Object> properties = new HashMap<>();
@@ -148,15 +150,15 @@ public class SmartConfig {
     }
 
     public Integer getIntProperty(String propName, int defaultValue) {
-        int ret;
-        String pValue = (String)properties.get(propName);
+        Object pValue = properties.get(propName);
+        if (pValue == null) return defaultValue;
+        if (pValue instanceof Number) return ((Number) pValue).intValue();
         try {
-            ret = Integer.parseInt(pValue);
+            return Integer.parseInt(pValue.toString());
         } catch (Throwable t) {
             log.debug("cannot parse the config value for " + propName, t);
             return defaultValue;
         }
-        return ret;
     }
 
     /**
@@ -203,6 +205,24 @@ public class SmartConfig {
 
     public SmartConfig withMaxConnectionIdleTime(int maxConnectionIdleTime) {
         setMaxConnectionIdleTime(maxConnectionIdleTime);
+        return this;
+    }
+
+    public int getMaxRetryAttempts() {
+        return maxRetryAttempts;
+    }
+
+    /**
+     * Set the maximum number of retry attempts for connection-level errors (e.g. connect timeout,
+     * connection refused). The smart client will transparently retry with the next healthy host.
+     * Defaults to {@value #DEFAULT_MAX_RETRY_ATTEMPTS}.
+     */
+    public void setMaxRetryAttempts(int maxRetryAttempts) {
+        this.maxRetryAttempts = maxRetryAttempts;
+    }
+
+    public SmartConfig withMaxRetryAttempts(int maxRetryAttempts) {
+        setMaxRetryAttempts(maxRetryAttempts);
         return this;
     }
 

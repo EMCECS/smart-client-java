@@ -16,7 +16,7 @@
 package com.emc.rest.smart.jersey;
 
 import com.emc.rest.util.SizedInputStream;
-import com.sun.jersey.core.util.ReaderWriter;
+import org.glassfish.jersey.message.internal.ReaderWriter;
 
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;

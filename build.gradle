@@ -19,10 +19,10 @@ plugins {
     id 'idea'
     id 'eclipse'
     id 'java'
-    id 'net.saliman.cobertura' version '4.0.0' apply false
-    id 'com.github.jk1.dependency-license-report' version '1.17' apply false
-    id 'org.ajoberstar.git-publish' version '3.0.1'
-    id 'nebula.release' version '15.3.1'
+    id 'jacoco'
+    id 'com.github.jk1.dependency-license-report' version '3.0.1' apply false
+    id 'org.ajoberstar.git-publish' version '5.1.2'
+    id 'nebula.release' version '21.0.0'
 }
 
 // name of the github project repository
@@ -39,11 +39,11 @@ ext.licenseUrl = 'https://www.apache.org/licenses/'
 
 subprojects {
     apply plugin: 'java-library'
-    apply plugin: 'net.saliman.cobertura'
+    apply plugin: 'jacoco'
     apply plugin: 'com.github.jk1.dependency-license-report'
     apply plugin: 'distribution'
     apply plugin: 'signing'
-    apply plugin: 'maven'
+    apply plugin: 'maven-publish'
 
     group 'com.emc.ecs'
 
@@ -54,61 +54,11 @@ subprojects {
         mavenLocal()
     }
 
-    configurations {
-        jars.extendsFrom(signatures)
-    }
-
     [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
-    sourceCompatibility = 1.8
-
-    def projectPom = {
-        project {
-            name project.name
-            description project.description
-            url githubProjectUrl
-
-            scm {
-                url githubProjectUrl
-                connection githubScmUrl
-                developerConnection githubScmUrl
-            }
-
-            licenses {
-                license {
-                    name licenseName
-                    url licenseUrl
-                    distribution 'repo'
-                }
-            }
-
-            developers {
-                developer {
-                    id 'EMCECS'
-                    name 'Dell EMC ECS'
-                }
-            }
-        }
-    }
-
-    task writePom {
-        ext.pomFile = file("$buildDir/pom.xml")
-        outputs.file pomFile
-        doLast {
-            pom(projectPom).writeTo pomFile
-        }
-    }
-
-    jar {
-        doFirst {
-            manifest {
-                attributes 'Implementation-Version': project.version,
-                        'Class-Path': configurations.runtime.collect { it.getName() }.join(' ')
-            }
-        }
-        into("META-INF/maven/$project.group/$project.name") {
-            from writePom
-        }
+    java {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     javadoc {
@@ -117,7 +67,7 @@ subprojects {
 
     task javadocJar(type: Jar) {
         archiveClassifier = 'javadoc'
-        from "${docsDir}/javadoc"
+        from javadoc.destinationDir
     }
     tasks.javadocJar.dependsOn javadoc
 
@@ -126,14 +76,92 @@ subprojects {
         from sourceSets.main.allSource
     }
 
-    artifacts {
-        jars jar
-        jars javadocJar
-        jars sourcesJar
+    jar {
+        doFirst {
+            manifest {
+                attributes 'Implementation-Version': project.version,
+                        'Class-Path': configurations.runtimeClasspath.collect { it.getName() }.join(' ')
+            }
+        }
     }
 
-    // remove zips and tars from "install" task
-    configurations.archives.artifacts.removeAll {it.file =~ /(zip|tar)$/}
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                from components.java
+                artifact sourcesJar
+                artifact javadocJar
+
+                pom {
+                    name = project.name
+                    description = providers.provider { project.description ?: project.name }
+                    url = githubProjectUrl
+
+                    scm {
+                        url = githubProjectUrl
+                        connection = githubScmUrl
+                        developerConnection = githubScmUrl
+                    }
+
+                    licenses {
+                        license {
+                            name = licenseName
+                            url = licenseUrl
+                            distribution = 'repo'
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id = 'EMCECS'
+                            name = 'Dell EMC ECS'
+                        }
+                    }
+                }
+            }
+        }
+
+        repositories {
+            maven {
+                // OSSRH is EOL (June 30 2025). Use the Central Portal OSSRH Staging API
+                // compatibility service. Credentials must now be a Portal user token
+                // (generate at https://central.sonatype.com/account) — not the old OSSRH password.
+                name = 'centralPortalOssrhStaging'
+                url = 'https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/'
+                credentials {
+                    username = findProperty('sonatypeUser') ?: ''
+                    password = findProperty('sonatypePass') ?: ''
+                }
+            }
+        }
+    }
+
+    signing {
+        // Modern GPG keys (Ed25519/Curve25519/ECDH = algorithm 18) cannot be parsed
+        // by the signing plugin's bundled BouncyCastle when reading secring.gpg.
+        // useGpgCmd() shells out to the local `gpg` binary instead, which handles
+        // every algorithm natively. Requires gpg on PATH (you already have it,
+        // since you exported secring.gpg with it).
+        //
+        // Properties consumed by useGpgCmd():
+        //   signing.gnupg.keyName        ← mapped from -PsigningKeyId below
+        //   signing.gnupg.passphrase     ← mapped from -PsigningPass below
+        //   signing.gnupg.executable     defaults to 'gpg' (override if needed)
+        //   signing.gnupg.homeDir        defaults to ~/.gnupg
+        useGpgCmd()
+
+        // hasTask(String) resolves relative paths against the ROOT project, so
+        // hasTask('publish') was looking for :publish (which does not exist) and
+        // always returned false — meaning signing was never required and no .asc
+        // files were uploaded. Match by task name across all projects instead.
+        required {
+            gradle.taskGraph.allTasks.any { t ->
+                t.name == 'publish' || t.name == 'publishToPortal' ||
+                t.name == 'publishMavenJavaPublicationToCentralPortalOssrhStagingRepository'
+            }
+        }
+        sign publishing.publications.mavenJava
+    }
 
     licenseReport {
         renderers = [new InventoryHtmlReportRenderer()]
@@ -142,7 +170,9 @@ subprojects {
     distributions {
         main {
             contents {
-                from configurations.jars.artifacts.files
+                from jar
+                from javadocJar
+                from sourcesJar
                 from('.') {
                     include '*.txt'
                 }
@@ -156,33 +186,12 @@ subprojects {
         }
     }
 
-    signing {
-        required { gradle.taskGraph.hasTask(uploadJars) }
-        sign configurations.jars
-    }
-
-    uploadJars {
-        repositories {
-            mavenDeployer {
-                beforeDeployment { deployment -> signing.signPom(deployment) }
-
-                repository(url: 'https://oss.sonatype.org/service/local/staging/deploy/maven2/') {
-                    authentication(userName: '', password: '')
-                }
-
-                pom projectPom
-            }
-        }
-    }
-
     // allow typing in credentials
     // note: this only works when run without the Gradle daemon (--no-daemon).
     //       if that's not possible, it's best to read passwords into env. variables and set these properties on the gradle
     //       command line ( -PsigningPass="${SIGNING_PASS}" -PsonatypePass="${SONATYPE_PASS}" )
     gradle.taskGraph.whenReady { taskGraph ->
-        if (taskGraph.hasTask(uploadJars)) {
-            if (!rootProject.hasProperty('signingSecretKeyRingFile'))
-                rootProject.ext.signingSecretKeyRingFile = new String(System.console().readLine('\nSecret key ring file: '))
+        if (taskGraph.allTasks.any { t -> t.name == 'publish' || t.name == 'publishToPortal' || t.name == 'publishMavenJavaPublicationToCentralPortalOssrhStagingRepository' }) {
             if (!rootProject.hasProperty('signingKeyId'))
                 rootProject.ext.signingKeyId = new String(System.console().readLine('\nSigning key id: '))
             if (!rootProject.hasProperty('signingPass'))
@@ -191,29 +200,30 @@ subprojects {
                 rootProject.ext.sonatypeUser = new String(System.console().readLine('\nSonatype username: '))
             if (!rootProject.hasProperty('sonatypePass'))
                 rootProject.ext.sonatypePass = new String(System.console().readPassword('\nSonatype password: '))
+            // Legacy properties (unused by useGpgCmd() but kept for reference).
             ext.'signing.keyId' = rootProject.ext.signingKeyId
-            ext.'signing.secretKeyRingFile' = rootProject.ext.signingSecretKeyRingFile
             ext.'signing.password' = rootProject.ext.signingPass
-            uploadJars.repositories.mavenDeployer.repository.authentication.userName = rootProject.ext.sonatypeUser
-            uploadJars.repositories.mavenDeployer.repository.authentication.password = rootProject.ext.sonatypePass
+            // useGpgCmd() reads these:
+            ext.'signing.gnupg.keyName'    = rootProject.ext.signingKeyId
+            ext.'signing.gnupg.passphrase' = rootProject.ext.signingPass
         }
     }
 }
 
-ext.aggregatedDocsDir = "$buildDir/aggregatedDocs"
+ext.aggregatedDocsDir = "${layout.buildDirectory.get().asFile}/aggregatedDocs"
 task aggregateDocs {
     doLast {
         if (project.hasProperty('release.stage') && project.ext['release.stage'] == 'final') {
             subprojects.each { sp ->
                 copy {
-                    from sp.docsDir
+                    from sp.javadoc.destinationDir
                     into "${aggregatedDocsDir}/${sp.name}/latest"
                 }
             }
         }
         subprojects.each {sp ->
             copy {
-                from sp.docsDir
+                from sp.javadoc.destinationDir
                 into "${aggregatedDocsDir}/${sp.name}/${sp.version}"
             }
         }
@@ -231,7 +241,71 @@ gitPublish {
 }
 tasks.gitPublishPush.dependsOn aggregateDocs
 
-tasks.release.dependsOn subprojects.test, subprojects.uploadJars, gitPublishPush, subprojects.distZip
+// After uploading via maven-publish (a "Maven-API-like" plugin that only does PUTs),
+// we must POST to the manual upload endpoint so the deployment becomes visible in the
+// Central Publisher Portal (https://central.sonatype.com/publishing/deployments).
+//
+// Multi-module note: all three subprojects upload to the same staging repository
+// (the OSSRH Staging API isolates by IP, not by artifact). One POST therefore
+// transfers ALL three modules together as a single Portal deployment. The Portal
+// validates them as a unit — if any module fails (missing pom field, bad signature,
+// etc.) the whole deployment is rejected, which is what you want for a multi-module
+// release.
+//
+// Auth quirk: /manual/* endpoints require Bearer <base64(user:pass)>, NOT Basic.
+// Same credentials as the PUT upload, different scheme keyword.
+task publishToPortal {
+    group = 'publishing'
+    description = 'Signals the OSSRH Staging API to transfer all subprojects\' staged artifacts to the Central Publisher Portal for review/release'
+    dependsOn subprojects.collect { "${it.path}:publish" }
+    doLast {
+        def namespace   = 'com.emc.ecs'                     // matches subprojects.group
+        def portalUser  = rootProject.findProperty('sonatypeUser') ?: ''
+        def portalPass  = rootProject.findProperty('sonatypePass') ?: ''
+        if (!portalUser || !portalPass) {
+            throw new GradleException('sonatypeUser/sonatypePass not set — generate a Portal token at https://central.sonatype.com/account')
+        }
+        def endpoint = "https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/${namespace}?publishing_type=user_managed"
+        def bearer   = java.util.Base64.encoder.encodeToString(
+                            "${portalUser}:${portalPass}".getBytes('UTF-8'))
+
+        logger.lifecycle("  Signalling Central Portal to transfer staged deployment for namespace: ${namespace}")
+        logger.lifecycle("    Subprojects included: ${subprojects*.name.join(', ')}")
+        def conn = (java.net.HttpURLConnection) new URL(endpoint).openConnection()
+        try {
+            conn.requestMethod  = 'POST'
+            conn.connectTimeout =  30_000
+            conn.readTimeout    = 120_000
+            conn.setRequestProperty('Authorization', "Bearer ${bearer}")
+            conn.setRequestProperty('Content-Length', '0')
+            conn.setRequestProperty('Accept', 'application/json')
+            conn.connect()
+
+            def code = conn.responseCode
+            if (code in [200, 201, 202, 204]) {
+                logger.lifecycle("  Deployment transferred to Central Publisher Portal (HTTP ${code}).")
+                logger.lifecycle('  Review and publish at: https://central.sonatype.com/publishing/deployments')
+            } else {
+                def body = '(no body)'
+                try { if (conn.errorStream) body = new String(conn.errorStream.bytes, 'UTF-8') } catch (ignored) { }
+                def hint = (code == 401)
+                    ? '  → 401: Portal user token is invalid/expired. Regenerate at https://central.sonatype.com/account\n'
+                    : (code == 404)
+                        ? '  → 404: No staging repo found for IP. Did the upload actually run? Check that signing succeeded.\n'
+                        : ''
+                throw new GradleException(
+                    "Failed to transfer deployment to Central Publisher Portal: HTTP ${code}\n${hint}${body}")
+            }
+        } finally {
+            conn.disconnect()
+        }
+    }
+}
+
+// NOTE: previously this only depended on test, gitPublishPush, distZip — it never
+// triggered the publish task, so historical `release` runs created git tags but
+// never uploaded artifacts to Maven Central. publishToPortal fixes that.
+tasks.release.dependsOn subprojects.test, publishToPortal, gitPublishPush, subprojects.distZip
 
 clean {
     delete aggregatedDocsDir

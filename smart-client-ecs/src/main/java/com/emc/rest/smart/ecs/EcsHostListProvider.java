@@ -15,22 +15,29 @@
  */
 package com.emc.rest.smart.ecs;
 
-import com.emc.rest.smart.Host;
-import com.emc.rest.smart.HostListProvider;
-import com.emc.rest.smart.LoadBalancer;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.WebResource;
-import org.apache.commons.codec.binary.Base64;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Locale;
+import java.util.SimpleTimeZone;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import javax.ws.rs.client.Invocation;
+
+import org.apache.commons.codec.binary.Base64;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.emc.rest.smart.Host;
+import com.emc.rest.smart.HostListProvider;
+import com.emc.rest.smart.LoadBalancer;
 
 public class EcsHostListProvider implements HostListProvider {
 
@@ -40,7 +47,7 @@ public class EcsHostListProvider implements HostListProvider {
     public static final int DEFAULT_PORT = 9021;
 
     protected final SimpleDateFormat rfc822DateFormat;
-    private final Client client;
+    private final javax.ws.rs.client.Client client;
     private final LoadBalancer loadBalancer;
     private final String user;
     private final String secret;
@@ -48,7 +55,7 @@ public class EcsHostListProvider implements HostListProvider {
     private int port = DEFAULT_PORT;
     private List<Vdc> vdcs;
 
-    public EcsHostListProvider(Client client, LoadBalancer loadBalancer, String user, String secret) {
+    public EcsHostListProvider(javax.ws.rs.client.Client client, LoadBalancer loadBalancer, String user, String secret) {
         this.client = client;
         this.loadBalancer = loadBalancer;
         this.user = user;
@@ -90,7 +97,8 @@ public class EcsHostListProvider implements HostListProvider {
     @Override
     public void runHealthCheck(Host host) {
         // header is workaround for STORAGE-1833
-        PingResponse response = client.resource(getRequestUri(host, "/?ping"))
+        PingResponse response = client.target(getRequestUri(host, "/?ping"))
+                .request()
                 .header("x-emc-namespace", "x")
                 .header("Connection", "close") // make sure maintenance calls are not kept alive
                 .get(PingResponse.class);
@@ -107,7 +115,7 @@ public class EcsHostListProvider implements HostListProvider {
 
     @Override
     public void destroy() {
-        client.destroy();
+        client.close();
     }
 
     protected List<Host> getDataNodes(Host host) {
@@ -130,7 +138,7 @@ public class EcsHostListProvider implements HostListProvider {
         }
 
         // construct request
-        WebResource.Builder request = client.resource(uri).getRequestBuilder();
+        Invocation.Builder request = client.target(uri).request();
 
         // add date and auth headers
         request.header("Date", rfcDate);
@@ -205,7 +213,7 @@ public class EcsHostListProvider implements HostListProvider {
         }
     }
 
-    public Client getClient() {
+    public javax.ws.rs.client.Client getClient() {
         return client;
     }
 
