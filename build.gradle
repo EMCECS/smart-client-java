@@ -307,6 +307,13 @@ task publishToPortal {
 // never uploaded artifacts to Maven Central. publishToPortal fixes that.
 tasks.release.dependsOn subprojects.test, publishToPortal, gitPublishPush, subprojects.distZip
 
+// Aggregated test report across all subprojects
+tasks.register('testReport', TestReport) {
+    destinationDirectory = file("${layout.buildDirectory.get().asFile}/reports/allTests")
+    testResults.from(subprojects*.test)
+}
+tasks.testReport.dependsOn subprojects.test
+
 clean {
     delete aggregatedDocsDir
 }
