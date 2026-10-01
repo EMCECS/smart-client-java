@@ -23,10 +23,10 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.TreeMap;
 
-import javax.ws.rs.client.Client;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
+import jakarta.ws.rs.client.Client;
+import jakarta.xml.bind.JAXBContext;
+import jakarta.xml.bind.Marshaller;
+import jakarta.xml.bind.Unmarshaller;
 
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.junit.jupiter.api.AfterEach;

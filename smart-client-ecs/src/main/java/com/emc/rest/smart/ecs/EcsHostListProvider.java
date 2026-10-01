@@ -29,7 +29,7 @@ import java.util.SimpleTimeZone;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import javax.ws.rs.client.Invocation;
+import jakarta.ws.rs.client.Invocation;
 
 import org.apache.commons.codec.binary.Base64;
 import org.slf4j.Logger;
@@ -47,7 +47,7 @@ public class EcsHostListProvider implements HostListProvider {
     public static final int DEFAULT_PORT = 9021;
 
     protected final SimpleDateFormat rfc822DateFormat;
-    private final javax.ws.rs.client.Client client;
+    private final jakarta.ws.rs.client.Client client;
     private final LoadBalancer loadBalancer;
     private final String user;
     private final String secret;
@@ -55,7 +55,7 @@ public class EcsHostListProvider implements HostListProvider {
     private int port = DEFAULT_PORT;
     private List<Vdc> vdcs;
 
-    public EcsHostListProvider(javax.ws.rs.client.Client client, LoadBalancer loadBalancer, String user, String secret) {
+    public EcsHostListProvider(jakarta.ws.rs.client.Client client, LoadBalancer loadBalancer, String user, String secret) {
         this.client = client;
         this.loadBalancer = loadBalancer;
         this.user = user;
@@ -213,7 +213,7 @@ public class EcsHostListProvider implements HostListProvider {
         }
     }
 
-    public javax.ws.rs.client.Client getClient() {
+    public jakarta.ws.rs.client.Client getClient() {
         return client;
     }
 

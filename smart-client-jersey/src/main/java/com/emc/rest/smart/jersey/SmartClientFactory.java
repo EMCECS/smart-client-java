@@ -19,8 +19,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
+import jakarta.ws.rs.client.Client;
+import jakarta.ws.rs.client.ClientBuilder;
 
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.glassfish.jersey.apache.connector.ApacheClientProperties;
@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import com.emc.rest.smart.PollingDaemon;
 import com.emc.rest.smart.SmartConfig;
-import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
+import com.fasterxml.jackson.jakarta.rs.json.JacksonXmlBindJsonProvider;
 
 public final class SmartClientFactory {
 
@@ -158,7 +158,7 @@ public final class SmartClientFactory {
         clientConfig.register(OctetStreamXmlProvider.class);
 
         // add JSON support (using Jackson's ObjectMapper instead of JAXB marshalling)
-        JacksonJaxbJsonProvider jsonProvider = new JacksonJaxbJsonProvider();
+        JacksonXmlBindJsonProvider jsonProvider = new JacksonXmlBindJsonProvider();
         // make sure we don't try to serialize any of these type hierarchies (clearly a bug in JacksonJsonProvider)
         jsonProvider.addUntouchable(java.io.InputStream.class);
         jsonProvider.addUntouchable(java.io.OutputStream.class);
