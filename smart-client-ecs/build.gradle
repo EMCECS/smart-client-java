@@ -4,17 +4,17 @@ dependencies {
     api project(':smart-client-core')
     api project(':smart-client-jersey')
     implementation 'org.slf4j:slf4j-api:2.0.16'
-    implementation 'org.glassfish.jersey.core:jersey-client:2.47'
+    implementation 'org.glassfish.jersey.core:jersey-client:3.1.11'
     implementation 'commons-codec:commons-codec:1.17.1'
     // jaxb was removed from Java 11 - provide explicit JAXB dependencies
-    implementation 'javax.xml.bind:jaxb-api:2.3.1'
-    runtimeOnly 'org.glassfish.jaxb:jaxb-runtime:2.3.9'
+    implementation 'jakarta.xml.bind:jakarta.xml.bind-api:4.0.0'
+    runtimeOnly 'org.glassfish.jaxb:jaxb-runtime:4.0.2'
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.0'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation 'ch.qos.logback:logback-classic:1.5.12'
-    testImplementation 'org.glassfish.jersey.connectors:jersey-apache-connector:2.47'
-    testImplementation 'org.glassfish.jersey.inject:jersey-hk2:2.47'
+    testImplementation 'org.glassfish.jersey.connectors:jersey-apache-connector:3.1.11'
+    testImplementation 'org.glassfish.jersey.inject:jersey-hk2:3.1.11'
     testImplementation 'org.apache.httpcomponents:httpclient:4.5.14'
 }
 
